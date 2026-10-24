@@ -318,21 +318,3 @@ To upload this project to your GitHub account:
    ```
 
 ---
-
-## 👨‍🏫 Viva Preparation & College Lab Examination Guide
-
-### Concepts in Simple English & Hinglish
-
-#### What is a Stack? (LIFO)
-- **English**: A linear data structure that follows the Last In, First Out (LIFO) rule. Elements are added and removed only at the top.
-- **Hinglish**: *Stack ek aisi list hoti hai jisme jo element sabse aakhiri me daala jata hai (Last In), wo sabse pehle nikalta hai (First Out). Jaise plates ki gaddi ya browser ka Back button.*
-
-#### What is a Queue? (FIFO)
-- **English**: A linear data structure following First In, First Out (FIFO). Elements enter at the rear and exit from the front.
-- **Hinglish**: *Queue ek line ki tarah hoti hai jaise ticket counter ya cafeteria ki line. Jo insaan sabse pehle line me lagta hai (First In), wahi sabse pehle ticket leke bahar nikalta hai (First Out).*
-
-#### Why use a Linked List for Queue instead of a Python List?
-- **English**: In a Python list, `list.pop(0)` takes $O(N)$ time because all remaining elements shift to the left. With a Singly Linked List, updating the `front` pointer takes $O(1)$ constant time with zero shifting.
-- **Hinglish**: *Python list me aage se element nikalne par saare bache hue elements ko ek index aage khiskana padta hai jisme O(N) time lagta hai. Linked list me hum sirf front pointer ko next node pe point karwa dete hain, jo bina kisi shifting ke O(1) me ho jata hai.*
-
----

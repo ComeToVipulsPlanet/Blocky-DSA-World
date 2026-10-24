@@ -1,0 +1,4 @@
+# Blocky DSA World Dependencies
+# This project uses the Python standard library exclusively.
+# No external third-party packages are required!
+# Python 3.8+ is recommended.

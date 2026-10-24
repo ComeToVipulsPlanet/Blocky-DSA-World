@@ -121,6 +121,18 @@ class LearningModeDialog(tk.Toplevel):
                 ("The Array Problem", "If a Queue is built using a normal Python list, dequeue requires list.pop(0). This forces all remaining (N - 1) items to shift one index left, resulting in an expensive O(N) time!"),
                 ("The Linked List Solution", "By creating a Node class with 'value' and 'next' pointers, we maintain two references: 'front' and 'rear'.\n1. Enqueue: We attach the new node to rear.next and update rear (O(1)).\n2. Dequeue: We move front to front.next (O(1)) — zero shifting required!"),
                 ("Crucial Invariant", "When the last remaining node is dequeued, both 'front' AND 'rear' must be reset to None! Otherwise, rear would point to a disconnected zombie node."),
+            ]),
+            ("\U0001f333 4. BINARY SEARCH TREE (BST) — EXPLORER", "#7C3AED", [
+                ("Concept", "A Binary Search Tree (BST) is a non-linear hierarchical data structure where every node has at most 2 children. Its defining property: for any node, ALL keys in the left subtree are SMALLER, and ALL keys in the right subtree are GREATER."),
+                ("BST Property", "For any node N:\n• Left subtree keys  <  N.value\n• Right subtree keys >  N.value\n• No duplicate keys are allowed in a standard BST."),
+                ("Why BST?", "BST allows efficient search, insertion, and deletion — all in O(log n) average time — by halving the search space at each comparison step (like Binary Search on arrays)."),
+                ("Insertion Algorithm", "Starting at root:\n1. Compare new key with current node.\n2. Move left if smaller, right if greater.\n3. Repeat until an empty slot is found.\n4. Create the new node at that position."),
+                ("Inorder Traversal", "Order: Left \u2192 Root \u2192 Right.\nKey Property: Inorder traversal of a valid BST produces keys in strictly ASCENDING SORTED ORDER — guaranteed!\nSample: 50, 30, 70, 20, 40, 60, 80 \u2192 Inorder: [20, 30, 40, 50, 60, 70, 80]"),
+                ("Preorder Traversal", "Order: Root \u2192 Left \u2192 Right.\nUse case: Creating a copy of the tree structure, serializing/deserializing trees, prefix expression evaluation.\nSample: 50, 30, 70, 20, 40, 60, 80 \u2192 Preorder: [50, 30, 20, 40, 70, 60, 80]"),
+                ("Postorder Traversal", "Order: Left \u2192 Right \u2192 Root.\nUse case: Safely deleting the entire tree bottom-up, postfix expression evaluation, generating dependency build order.\nSample: 50, 30, 70, 20, 40, 60, 80 \u2192 Postorder: [20, 40, 30, 60, 80, 70, 50]"),
+                ("Deletion Cases", "BST deletion has 3 cases:\n\u2022 Case 1 (Leaf): Simply remove the node.\n\u2022 Case 2 (1 Child): Bypass node, link parent directly to child.\n\u2022 Case 3 (2 Children): Replace value with inorder successor (smallest in right subtree), then delete successor."),
+                ("Time Complexity", "\u2022 Search:  Avg O(log n)  |  Worst O(n)\n\u2022 Insert:  Avg O(log n)  |  Worst O(n)\n\u2022 Delete:  Avg O(log n)  |  Worst O(n)\n\u2022 Inorder/Preorder/Postorder:  O(n)\n\nWorst case O(n) occurs when the tree becomes a skewed linear chain (e.g. inserting 10, 20, 30, 40 in sorted order with no balancing)."),
+                ("Balanced vs Skewed", "A height-balanced BST (e.g. AVL Tree or Red-Black Tree) guarantees O(log n) operations by enforcing that the height difference between left and right subtrees is at most 1 at every node. A skewed (degenerate) BST degrades to O(n) — equivalent to a linked list!"),
             ])
         ]
 
@@ -239,6 +251,34 @@ class LearningModeDialog(tk.Toplevel):
         )
         btn_demo3.pack(side=tk.RIGHT, padx=10)
 
+        # Demo 4: BST Explorer
+        demo4_card = tk.LabelFrame(container, text="  Scenario D: BST Explorer — Binary Search Tree Traversal Demo  ", font=("Segoe UI", 10, "bold"), fg="#7C3AED", bg="#FDFEFE", padx=12, pady=10)
+        demo4_card.pack(fill=tk.X, pady=8)
+
+        tk.Label(
+            demo4_card,
+            text="Loads the canonical BST sample [50, 30, 70, 20, 40, 60, 80].\n"
+                 "Try Inorder (sorted order), Preorder (root first), and Postorder (root last) in the BST Explorer module!",
+            font=("Segoe UI", 9),
+            fg="#34495E",
+            bg="#FDFEFE",
+            justify="left"
+        ).pack(side=tk.LEFT, padx=10)
+
+        btn_demo4 = tk.Button(
+            demo4_card,
+            text="\U0001f333 Load BST Demo",
+            font=("Segoe UI", 9, "bold"),
+            bg="#7C3AED",
+            fg="#FFFFFF",
+            activebackground="#6D28D9",
+            cursor="hand2",
+            padx=12,
+            pady=6,
+            command=lambda: self._on_load_scenario("BST")
+        )
+        btn_demo4.pack(side=tk.RIGHT, padx=10)
+
         # Reset button
         reset_frame = tk.Frame(container, bg="#FFFFFF")
         reset_frame.pack(fill=tk.X, pady=15)
@@ -343,6 +383,30 @@ class LearningModeDialog(tk.Toplevel):
                 ],
                 "correct": 2,
                 "explanation": "Stack (LIFO) is used for Function Call Stacks and Undo operations because the most recent function call or action must be reversed or returned first."
+            },
+            {
+                "id": 6,
+                "question": "6. For a valid Binary Search Tree (BST), what is guaranteed about Inorder Traversal (Left \u2192 Root \u2192 Right)?",
+                "options": [
+                    "A) It visits nodes in reverse sorted order",
+                    "B) It visits nodes in strictly ascending sorted order",
+                    "C) It always starts from the leaf nodes",
+                    "D) It visits the root node first, then both subtrees"
+                ],
+                "correct": 1,
+                "explanation": "Inorder traversal (Left \u2192 Root \u2192 Right) on a valid BST always produces keys in strictly ascending sorted order. This is guaranteed by the BST property where left subtree keys < root < right subtree keys at every node."
+            },
+            {
+                "id": 7,
+                "question": "7. Inserting values [10, 20, 30, 40, 50] in sorted order into an unbalanced BST creates what kind of tree?",
+                "options": [
+                    "A) A perfectly balanced BST with height O(log n)",
+                    "B) A complete binary tree",
+                    "C) A skewed (degenerate) tree with height O(n), reducing search to O(n)",
+                    "D) A circular binary tree"
+                ],
+                "correct": 2,
+                "explanation": "Inserting values in strictly ascending or descending sorted order creates a skewed (degenerate) BST — each new node becomes the right (or left) child of the previous one, creating a linear chain of height O(n). This degrades BST search, insert, and delete from average O(log n) to worst-case O(n)."
             }
         ]
 

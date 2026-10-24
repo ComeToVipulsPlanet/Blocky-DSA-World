@@ -31,6 +31,7 @@ class UndoSnapshot:
     stack_items: List[Any]
     queue_items: List[Any]
     action_description: str
+    bst_items: Optional[List[int]] = None
 
 
 class HistoryTracker:
@@ -57,8 +58,8 @@ class HistoryTracker:
         Record a verified successful operation.
         
         Args:
-            structure: "STACK" or "QUEUE"
-            operation: Name of operation (e.g. "PUSH", "POP", "ENQUEUE")
+            structure: "STACK", "QUEUE", or "BST"
+            operation: Name of operation (e.g. "PUSH", "POP", "INSERT", "SEARCH")
             value: Associated value (or "-" if none)
             message: Descriptive outcome
             
@@ -89,7 +90,8 @@ class HistoryTracker:
         self,
         stack_items: List[Any],
         queue_items: List[Any],
-        action_description: str
+        action_description: str,
+        bst_items: Optional[List[int]] = None
     ) -> None:
         """
         Save a state snapshot prior to executing a mutating operation.
@@ -97,7 +99,8 @@ class HistoryTracker:
         snapshot = UndoSnapshot(
             stack_items=list(stack_items),
             queue_items=list(queue_items),
-            action_description=action_description
+            action_description=action_description,
+            bst_items=list(bst_items) if bst_items is not None else None
         )
         self._undo_stack.append(snapshot)
         if len(self._undo_stack) > self.max_undo:

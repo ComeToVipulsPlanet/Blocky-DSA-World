@@ -9,12 +9,14 @@ try:
     from .history import HistoryTracker
     from .visualizer import VisualizerCanvas
     from .learning_mode import LearningModeDialog
+    from .bst import BinarySearchTree, Node as BSTNode
 except (ImportError, ValueError):
     from src.stack import Stack
     from src.queue_linked_list import Queue, Node
     from src.history import HistoryTracker
     from src.visualizer import VisualizerCanvas
     from src.learning_mode import LearningModeDialog
+    from src.bst import BinarySearchTree, Node as BSTNode
 
 __all__ = [
     "Stack",
@@ -23,4 +25,6 @@ __all__ = [
     "HistoryTracker",
     "VisualizerCanvas",
     "LearningModeDialog",
+    "BinarySearchTree",
+    "BSTNode",
 ]

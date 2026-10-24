@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.stack import Stack
 from src.queue_linked_list import Queue
+from src.bst import BinarySearchTree, Node
 
 
 # Color palettes for 3D toy blocks (front face, top face highlight, side shadow, text)
@@ -45,6 +46,13 @@ class VisualizerCanvas(tk.Canvas):
 
         self.stack_ref: Optional[Stack] = None
         self.queue_ref: Optional[Queue] = None
+        self.bst_ref: Optional[BinarySearchTree] = None
+        self.mode: str = "STACK_QUEUE"  # "STACK_QUEUE" or "BST"
+        self.highlighted_bst_node: Optional[int] = None
+        self.highlighted_bst_path: List[int] = []
+        self.bst_beam_highlight: Optional[Tuple[int, int]] = None
+        self.bst_visited_nodes: List[int] = []
+        self.bst_duplicate_node: Optional[int] = None
 
         # Animation state guards
         self.is_animating: bool = False
@@ -91,6 +99,17 @@ class VisualizerCanvas(tk.Canvas):
         """Bind live Stack and Queue models."""
         self.stack_ref = stack
         self.queue_ref = queue
+        self.redraw()
+
+    def set_bst_source(self, bst: BinarySearchTree) -> None:
+        """Bind live Binary Search Tree model."""
+        self.bst_ref = bst
+        if self.mode == "BST":
+            self.redraw()
+
+    def set_mode(self, mode: str) -> None:
+        """Switch visualizer view mode: 'STACK_QUEUE' or 'BST'."""
+        self.mode = mode
         self.redraw()
 
     def set_speech(self, message: str) -> None:
@@ -142,11 +161,15 @@ class VisualizerCanvas(tk.Canvas):
         self._draw_voxel_landscape(width, height)
         self._draw_avatar_mascot(width, height)
 
-        if self.stack_ref:
-            self._draw_stack_platform(width, height)
+        if self.mode == "BST":
+            if self.bst_ref:
+                self._draw_bst_platform(width, height)
+        else:
+            if self.stack_ref:
+                self._draw_stack_platform(width, height)
 
-        if self.queue_ref:
-            self._draw_queue_platform(width, height)
+            if self.queue_ref:
+                self._draw_queue_platform(width, height)
 
     def _draw_sky_and_sun(self, width: int, height: int) -> None:
         # Sky gradient simulation using stacked horizontal color bands
@@ -215,7 +238,7 @@ class VisualizerCanvas(tk.Canvas):
         with real-time animated breathing and an interactive speech bubble.
         """
         ground_y = int(height * 0.62)
-        center_x = int(width * 0.44)
+        center_x = int(width * 0.12) if self.mode == "BST" else int(width * 0.44)
         bob_offset = int(math.sin(self.bob_phase) * 2.5)
         base_y = ground_y - 8 + bob_offset
 
@@ -873,3 +896,369 @@ class VisualizerCanvas(tk.Canvas):
             self.redraw()
 
         self.after(duration_ms, _clear)
+
+    # -------------------------------------------------------------------------
+    # BINARY SEARCH TREE (BST) VISUALIZATION & 3D PLATFORM
+    # -------------------------------------------------------------------------
+    def _draw_bst_platform(self, width: int, height: int) -> None:
+        """
+        Renders the Binary Search Tree in the 3D Roblox blocky world.
+        Includes floating 3D grass/stone platforms, 3D connector beams,
+        branch indicators ('L'/'R'), 3D isometric node blocks with studs,
+        and root crown badge.
+        """
+        if self.bst_ref is None or self.bst_ref.is_empty():
+            # Empty tree banner & stone pedestal
+            ped_w = 260
+            ped_h = 30
+            ped_x = width // 2 - ped_w // 2
+            ped_y = int(height * 0.40)
+
+            self._draw_3d_cube(
+                ped_x, ped_y, ped_w, ped_h,
+                14, 10,
+                "#334155", "#475569", "#1E293B",
+                studs=True
+            )
+            self.create_text(
+                width // 2, ped_y + 15,
+                text="🌳 BST EXPLORER — EMPTY TREE",
+                font=("Segoe UI", 9, "bold"),
+                fill="#F8FAFC"
+            )
+            self.create_text(
+                width // 2, ped_y + ped_h + 22,
+                text="Insert an integer (e.g. 50) or click 'Load Sample Tree' to begin!",
+                font=("Segoe UI", 9, "italic"),
+                fill="#1E293B"
+            )
+            return
+
+        # Calculate automatic non-overlapping 3D layout coordinates
+        layout = self.bst_ref.calculate_layout(width, height, node_width=52, node_height=34)
+
+        # Floating Roblox header label
+        header_w = 300
+        hx = width // 2 - header_w // 2
+        self.create_rectangle(hx, 10, hx + header_w, 36, fill="#0F172A", outline="#38BDF8", width=1.5)
+        self.create_text(
+            width // 2, 23,
+            text="🌳 3D BINARY SEARCH TREE WORLD",
+            font=("Segoe UI", 9, "bold"),
+            fill="#FACC15"
+        )
+
+        bw = 52.0
+        bh = 34.0
+        off_x = 10.0
+        off_y = 8.0
+
+        # 1. Draw 3D Connecting Beams between parent and child nodes
+        edges = self.bst_ref.get_all_edges()
+        for parent, child, direction in edges:
+            if parent.value not in layout or child.value not in layout:
+                continue
+
+            px, py, _ = layout[parent.value]
+            cx, cy, _ = layout[child.value]
+
+            p_bottom_x = px + bw / 2 + off_x / 2
+            p_bottom_y = py + bh
+            c_top_x = cx + bw / 2 + off_x / 2
+            c_top_y = cy - off_y / 2
+
+            is_beam_hl = (self.bst_beam_highlight == (parent.value, child.value))
+
+            # 3D Drop Shadow for beam
+            self.create_line(
+                p_bottom_x, p_bottom_y + 3,
+                c_top_x, c_top_y + 3,
+                fill="#0F172A", width=6
+            )
+
+            if is_beam_hl:
+                # Glowing traversal beam
+                self.create_line(
+                    p_bottom_x, p_bottom_y,
+                    c_top_x, c_top_y,
+                    fill="#FEF08A", width=8
+                )
+                self.create_line(
+                    p_bottom_x, p_bottom_y,
+                    c_top_x, c_top_y,
+                    fill="#FACC15", width=5
+                )
+            else:
+                # Cool Cyber Blue (L) or Vibrant Purple (R) Roblox Beams
+                beam_color = "#38BDF8" if direction == "L" else "#C084FC"
+                self.create_line(
+                    p_bottom_x, p_bottom_y,
+                    c_top_x, c_top_y,
+                    fill=beam_color, width=4
+                )
+
+            # Midpoint directional branch badge ("L" or "R")
+            mx = (p_bottom_x + c_top_x) / 2
+            my = (p_bottom_y + c_top_y) / 2
+            badge_color = "#0284C7" if direction == "L" else "#9333EA"
+            self.create_oval(
+                mx - 8, my - 8, mx + 8, my + 8,
+                fill="#0F172A", outline=badge_color, width=1.5
+            )
+            self.create_text(
+                mx, my,
+                text=direction,
+                font=("Segoe UI", 7, "bold"),
+                fill="#FFFFFF"
+            )
+
+        # 2. Draw 3D Node Blocks
+        for val, (nx, ny, depth) in layout.items():
+            is_dup = (self.bst_duplicate_node == val)
+            is_hl = (self.highlighted_bst_node == val)
+            is_vis = (val in self.bst_visited_nodes)
+
+            if is_dup:
+                palette = {"front": "#EF4444", "top": "#F87171", "side": "#B91C1C", "text": "#FFFFFF"}
+                self.create_rectangle(
+                    nx - 5, ny - off_y - 5,
+                    nx + bw + off_x + 5, ny + bh + 5,
+                    outline="#DC2626", width=3, dash=(4, 2)
+                )
+            elif is_hl:
+                palette = {"front": "#F59E0B", "top": "#FDE047", "side": "#B45309", "text": "#0F172A"}
+                self.create_rectangle(
+                    nx - 5, ny - off_y - 5,
+                    nx + bw + off_x + 5, ny + bh + 5,
+                    outline="#FACC15", width=3, dash=(4, 2)
+                )
+            elif is_vis:
+                palette = {"front": "#10B981", "top": "#6EE7B7", "side": "#047857", "text": "#FFFFFF"}
+                self.create_rectangle(
+                    nx - 4, ny - off_y - 4,
+                    nx + bw + off_x + 4, ny + bh + 4,
+                    outline="#34D399", width=2
+                )
+            else:
+                root_val = self.bst_ref.root.value if self.bst_ref.root else 0
+                side_branch = 0 if val < root_val else (2 if val > root_val else 1)
+                p_idx = (depth * 2 + side_branch) % len(BLOCK_PALETTES)
+                palette = BLOCK_PALETTES[p_idx]
+
+            outline_c = "#FACC15" if is_hl else ("#DC2626" if is_dup else "#1E293B")
+            self._draw_3d_cube(
+                nx, ny, bw, bh,
+                off_x, off_y,
+                palette["front"], palette["top"], palette["side"],
+                studs=True,
+                outline=outline_c
+            )
+
+            # Center node key label
+            self.create_text(
+                nx + bw / 2, ny + bh / 2,
+                text=str(val),
+                font=("Segoe UI", 11, "bold"),
+                fill=palette["text"]
+            )
+
+            # If Root node, display floating 3D golden crown badge
+            if self.bst_ref.root and val == self.bst_ref.root.value:
+                crown_w = 66
+                crown_x = nx + bw / 2
+                crown_y = ny - off_y - 18
+                self.create_rectangle(
+                    crown_x - crown_w / 2, crown_y - 10,
+                    crown_x + crown_w / 2, crown_y + 8,
+                    fill="#FACC15", outline="#B45309", width=1.5
+                )
+                self.create_text(
+                    crown_x, crown_y - 1,
+                    text="👑 ROOT",
+                    font=("Segoe UI", 7, "bold"),
+                    fill="#78350F"
+                )
+                self.create_polygon(
+                    crown_x - 4, crown_y + 8,
+                    crown_x + 4, crown_y + 8,
+                    crown_x, crown_y + 13,
+                    fill="#FACC15", outline="#B45309"
+                )
+
+    # -------------------------------------------------------------------------
+    # BST ANIMATIONS (NON-BLOCKING)
+    # -------------------------------------------------------------------------
+    def animate_bst_insert(
+        self,
+        value: int,
+        path: List[int],
+        steps: List[str],
+        on_complete: Callable[[], None],
+        animate: bool = True
+    ) -> None:
+        """
+        Step-by-step path comparison animation, followed by a 3D block
+        dropping from the sky into its calculated node position.
+        """
+        if not animate or not self.winfo_exists():
+            self.is_animating = False
+            self.clear_bst_highlights()
+            on_complete()
+            return
+
+        self.is_animating = True
+        step_idx = 0
+
+        def _step_path():
+            if not self.winfo_exists():
+                self.is_animating = False
+                return
+
+            nonlocal step_idx
+            if step_idx < len(path) - 1:
+                cur_node = path[step_idx]
+                next_node = path[step_idx + 1]
+                self.highlighted_bst_node = cur_node
+                self.bst_beam_highlight = (cur_node, next_node)
+                if step_idx < len(steps):
+                    self.set_speech(steps[step_idx])
+                else:
+                    self.set_speech(f"Navigating: {cur_node} ➔ {next_node}")
+                self.redraw()
+                step_idx += 1
+                self._anim_after_id = self.after(350, _step_path)
+            else:
+                # Finished path traversal; now animate the new block dropping in!
+                _drop_new_block()
+
+        def _drop_new_block():
+            if not self.winfo_exists():
+                self.is_animating = False
+                return
+
+            # Target position from layout
+            width = self.winfo_width() or 850
+            height = self.winfo_height() or 550
+            layout = self.bst_ref.calculate_layout(width, height) if self.bst_ref else {}
+
+            target_x, target_y, _ = layout.get(value, (width // 2, 80, 0))
+            bw, bh = 52.0, 34.0
+            start_y = 15.0
+            frames = 8
+            cur_frame = 0
+
+            def _drop_step():
+                if not self.winfo_exists():
+                    self.is_animating = False
+                    return
+
+                nonlocal cur_frame
+                cur_frame += 1
+                prog = cur_frame / frames
+                eased = 1 - pow(1 - prog, 3)
+                cur_y = start_y + (target_y - start_y) * eased
+
+                self.redraw()
+                # Draw falling block
+                self._draw_labeled_dsa_block(target_x, cur_y, bw, bh, value, 0, highlight=True)
+
+                if cur_frame < frames:
+                    self._anim_after_id = self.after(25, _drop_step)
+                else:
+                    self.is_animating = False
+                    self.clear_bst_highlights()
+                    self.set_speech(f"Node {value} inserted successfully! BST property maintained.")
+                    self.redraw()
+                    on_complete()
+
+            _drop_step()
+
+        _step_path()
+
+    def animate_bst_duplicate(
+        self,
+        value: int,
+        path: List[int],
+        on_complete: Callable[[], None],
+        animate: bool = True
+    ) -> None:
+        """Pulsing red alert animation rejecting duplicate value."""
+        if not animate or not self.winfo_exists():
+            self.clear_bst_highlights()
+            on_complete()
+            return
+
+        self.is_animating = True
+        self.bst_duplicate_node = value
+        self.set_speech(f"Duplicate value {value} rejected! BST keys must be unique.")
+        self.redraw()
+
+        def _clear_dup():
+            self.is_animating = False
+            self.bst_duplicate_node = None
+            self.redraw()
+            on_complete()
+
+        self._anim_after_id = self.after(850, _clear_dup)
+
+    def animate_bst_search(
+        self,
+        value: int,
+        path: List[int],
+        found: bool,
+        steps: List[str],
+        on_complete: Callable[[], None],
+        animate: bool = True
+    ) -> None:
+        """Step-by-step search path highlighting."""
+        if not animate or not self.winfo_exists():
+            self.clear_bst_highlights()
+            on_complete()
+            return
+
+        self.is_animating = True
+        step_idx = 0
+
+        def _search_step():
+            if not self.winfo_exists():
+                self.is_animating = False
+                return
+
+            nonlocal step_idx
+            if step_idx < len(path):
+                cur_node = path[step_idx]
+                self.highlighted_bst_node = cur_node
+                if step_idx < len(path) - 1:
+                    self.bst_beam_highlight = (cur_node, path[step_idx + 1])
+                else:
+                    self.bst_beam_highlight = None
+
+                if step_idx < len(steps):
+                    self.set_speech(steps[step_idx])
+                self.redraw()
+                step_idx += 1
+                self._anim_after_id = self.after(400, _search_step)
+            else:
+                self.is_animating = False
+                if found:
+                    self.set_speech(f"Match found! Node {value} exists in the BST.")
+                else:
+                    self.set_speech(f"Value {value} not found in the BST.")
+                self.clear_bst_highlights()
+                on_complete()
+
+        _search_step()
+
+    def highlight_bst_node(self, value: int, visited_list: Optional[List[int]] = None) -> None:
+        """Highlights a single BST node and visited path (e.g. for traversals)."""
+        self.highlighted_bst_node = value
+        self.bst_visited_nodes = list(visited_list) if visited_list else []
+        self.redraw()
+
+    def clear_bst_highlights(self) -> None:
+        """Resets all BST highlight markers."""
+        self.highlighted_bst_node = None
+        self.bst_beam_highlight = None
+        self.bst_visited_nodes = []
+        self.bst_duplicate_node = None
+        self.redraw()

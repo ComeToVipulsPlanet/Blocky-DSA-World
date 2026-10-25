@@ -28,7 +28,15 @@ from src.queue_linked_list import Queue
 from src.bst import BinarySearchTree, Node
 from src.history import HistoryTracker
 from src.visualizer import VisualizerCanvas
-from src.learning_mode import LearningModeDialog
+from src.learning_mode import LearningModeDialog, InfixLearningDialog
+from dsa.infix_to_postfix import (
+    InfixToPostfixConverter,
+    ConversionStep,
+    convert_infix_to_postfix,
+    generate_random_expression,
+    validate_expression,
+    tokenize_expression,
+)
 
 
 class BlockyDSAWorldApp(tk.Tk):
@@ -90,6 +98,45 @@ class BlockyDSAWorldApp(tk.Tk):
         self.history_listbox_bst: Optional[tk.Listbox] = None
         self.btn_nav_sq: Optional[tk.Button] = None
         self.btn_nav_bst: Optional[tk.Button] = None
+        self.btn_nav_infix: Optional[tk.Button] = None
+
+        # Infix to Postfix Kingdom Data & Animation State
+        self.infix_converter = InfixToPostfixConverter()
+        self.infix_current_expr: str = "A+B*C"
+        self.infix_tokens: List[str] = []
+        self.infix_steps: List[ConversionStep] = []
+        self.infix_current_step_idx: int = 0
+        self.infix_is_playing: bool = False
+        self.infix_timer_id: Optional[str] = None
+        self.infix_speed_ms: int = 400
+        self.infix_last_result: str = ""
+        self.infix_error: Optional[str] = None
+
+        # Challenge Mode State
+        self.challenge_target_expr: str = ""
+        self.challenge_expected_postfix: str = ""
+        self.challenge_difficulty: str = "medium"
+        self.challenge_attempts: int = 0
+        self.challenge_correct: int = 0
+
+        # Infix UI References
+        self.entry_infix_expr: Optional[tk.Entry] = None
+        self.entry_infix_result: Optional[tk.Entry] = None
+        self.lbl_infix_step_counter: Optional[tk.Label] = None
+        self.btn_infix_play_pause: Optional[tk.Button] = None
+        self.lbl_infix_speed_val: Optional[tk.Label] = None
+        self.lbl_infix_step_num: Optional[tk.Label] = None
+        self.lbl_infix_curr_token: Optional[tk.Label] = None
+        self.lbl_infix_action_type: Optional[tk.Label] = None
+        self.lbl_infix_stack_contents: Optional[tk.Label] = None
+        self.lbl_infix_postfix_output: Optional[tk.Label] = None
+        self.lbl_infix_explanation_text: Optional[tk.Label] = None
+        self.lbl_infix_reason_text: Optional[tk.Label] = None
+        self.history_tree_infix: Optional[ttk.Treeview] = None
+        self.entry_challenge_answer: Optional[tk.Entry] = None
+        self.lbl_challenge_prompt: Optional[tk.Label] = None
+        self.lbl_challenge_feedback: Optional[tk.Label] = None
+        self.lbl_challenge_score: Optional[tk.Label] = None
 
         # Build GUI
         self._build_menu_bar()
@@ -98,9 +145,12 @@ class BlockyDSAWorldApp(tk.Tk):
         self._build_main_layout()
         self._build_status_footer()
 
-        # Connect data to Visualizer
+        # Connect data & portal callbacks to Visualizer
         self.visualizer.set_data_sources(self.stack, self.queue)
         self.visualizer.set_bst_source(self.bst)
+        self.visualizer.on_portal_return = lambda: self.switch_mode("STACK_QUEUE")
+        self.visualizer.on_portal_reset = self.on_infix_reset
+        self.visualizer.on_portal_learn = self.open_infix_learning_mode
         self._update_info_panel("System initialized. Ready for operations.")
 
     # -------------------------------------------------------------------------
@@ -115,8 +165,24 @@ class BlockyDSAWorldApp(tk.Tk):
         menubar.add_cascade(label="Modules", menu=mod_menu)
         mod_menu.add_command(label="📦 Stack & Queue Lab", command=lambda: self.switch_mode("STACK_QUEUE"))
         mod_menu.add_command(label="🌳 Binary Search Tree — BST Explorer", command=lambda: self.switch_mode("BST"))
+        mod_menu.add_command(label="👑 Infix to Postfix Kingdom", command=lambda: self.switch_mode("INFIX"))
         mod_menu.add_separator()
         mod_menu.add_command(label="Exit", command=self.destroy)
+
+        # Infix to Postfix Kingdom Menu
+        infix_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Infix Kingdom", menu=infix_menu)
+        infix_menu.add_command(label="👑 Enter Kingdom", command=lambda: self.switch_mode("INFIX"))
+        infix_menu.add_command(label="⚡ Convert Current Expression", command=lambda: self.on_infix_convert())
+        infix_menu.add_separator()
+        infix_menu.add_command(label="▶ Play / ⏸ Pause", command=self.on_infix_play_pause)
+        infix_menu.add_command(label="⏭ Next Step", command=self.on_infix_next_step)
+        infix_menu.add_command(label="⏮ Previous Step", command=self.on_infix_prev_step)
+        infix_menu.add_command(label="⏭ Skip to Result", command=self.on_infix_skip_to_end)
+        infix_menu.add_command(label="🔄 Reset Kingdom", command=self.on_infix_reset)
+        infix_menu.add_separator()
+        infix_menu.add_command(label="🎓 Infix Masterclass Guide", command=self.open_infix_learning_mode)
+        infix_menu.add_command(label="🏆 Challenge Practice Mode", command=self.on_challenge_new)
 
         # 2. BST Operations Menu
         bst_menu = tk.Menu(menubar, tearoff=0)
@@ -276,24 +342,68 @@ class BlockyDSAWorldApp(tk.Tk):
         )
         self.btn_nav_bst.pack(side=tk.LEFT, padx=4, pady=4)
 
+        self.btn_nav_infix = tk.Button(
+            nav,
+            text="👑  Infix to Postfix Kingdom",
+            font=("Segoe UI", 9, "bold"),
+            bg="#334155",
+            fg="#CBD5E1",
+            activebackground="#475569",
+            cursor="hand2",
+            relief="flat",
+            padx=16,
+            pady=4,
+            command=lambda: self.switch_mode("INFIX")
+        )
+        self.btn_nav_infix.pack(side=tk.LEFT, padx=4, pady=4)
+
     def switch_mode(self, mode: str) -> None:
-        """Switch active DSA view between Stack/Queue and BST Explorer."""
+        """Switch active DSA view between Stack/Queue, BST Explorer, and Infix Kingdom."""
         if self.visualizer.is_animating:
             return
 
         self.current_mode = mode
         self.visualizer.set_mode(mode)
 
-        if mode == "BST":
+        if mode == "INFIX":
+            if self.btn_nav_infix:
+                self.btn_nav_infix.configure(bg="#D97706", fg="#FFFFFF")
+            if self.btn_nav_sq:
+                self.btn_nav_sq.configure(bg="#334155", fg="#CBD5E1")
+            if self.btn_nav_bst:
+                self.btn_nav_bst.configure(bg="#334155", fg="#CBD5E1")
+
+            self.frame_sq_ctrl.pack_forget()
+            self.frame_bst_ctrl.pack_forget()
+            self.frame_infix_ctrl.pack(fill=tk.BOTH, expand=True)
+
+            self.frame_sq_info.pack_forget()
+            self.frame_bst_info.pack_forget()
+            self.frame_infix_info.pack(fill=tk.BOTH, expand=True)
+
+            if self.lbl_status_msg:
+                self.lbl_status_msg.configure(
+                    text="👑 Infix to Postfix Kingdom: O(n) Linear Time | O(n) Auxiliary Space | Shunting-Yard Algorithm with Custom LIFO Stack"
+                )
+            self.visualizer.set_speech("Welcome to Infix to Postfix Kingdom! Enter an expression or test your skills in Challenge Mode.")
+            if not self.infix_steps:
+                self.on_infix_convert("A+B*C")
+            else:
+                self._update_infix_telemetry()
+        elif mode == "BST":
             if self.btn_nav_bst:
                 self.btn_nav_bst.configure(bg="#10B981", fg="#FFFFFF")
             if self.btn_nav_sq:
                 self.btn_nav_sq.configure(bg="#334155", fg="#CBD5E1")
+            if self.btn_nav_infix:
+                self.btn_nav_infix.configure(bg="#334155", fg="#CBD5E1")
 
             self.frame_sq_ctrl.pack_forget()
+            self.frame_infix_ctrl.pack_forget()
             self.frame_bst_ctrl.pack(fill=tk.BOTH, expand=True)
 
             self.frame_sq_info.pack_forget()
+            self.frame_infix_info.pack_forget()
             self.frame_bst_info.pack(fill=tk.BOTH, expand=True)
 
             if self.lbl_status_msg:
@@ -307,11 +417,15 @@ class BlockyDSAWorldApp(tk.Tk):
                 self.btn_nav_sq.configure(bg="#0284C7", fg="#FFFFFF")
             if self.btn_nav_bst:
                 self.btn_nav_bst.configure(bg="#334155", fg="#CBD5E1")
+            if self.btn_nav_infix:
+                self.btn_nav_infix.configure(bg="#334155", fg="#CBD5E1")
 
             self.frame_bst_ctrl.pack_forget()
+            self.frame_infix_ctrl.pack_forget()
             self.frame_sq_ctrl.pack(fill=tk.BOTH, expand=True)
 
             self.frame_bst_info.pack_forget()
+            self.frame_infix_info.pack_forget()
             self.frame_sq_info.pack(fill=tk.BOTH, expand=True)
 
             if self.lbl_status_msg:
@@ -350,18 +464,22 @@ class BlockyDSAWorldApp(tk.Tk):
     def _build_control_panel(self, parent: tk.Frame) -> None:
         self.frame_sq_ctrl = tk.Frame(parent, bg="#F8FAFC")
         self.frame_bst_ctrl = tk.Frame(parent, bg="#F8FAFC")
+        self.frame_infix_ctrl = tk.Frame(parent, bg="#F8FAFC")
 
         self._build_sq_controls(self.frame_sq_ctrl)
         self._build_bst_controls(self.frame_bst_ctrl)
+        self._build_infix_controls(self.frame_infix_ctrl)
 
         self.frame_sq_ctrl.pack(fill=tk.BOTH, expand=True)
 
     def _build_info_panel(self, parent: tk.Frame) -> None:
         self.frame_sq_info = tk.Frame(parent, bg="#F8FAFC")
         self.frame_bst_info = tk.Frame(parent, bg="#F8FAFC")
+        self.frame_infix_info = tk.Frame(parent, bg="#F8FAFC")
 
         self._build_sq_telemetry(self.frame_sq_info)
         self._build_bst_telemetry(self.frame_bst_info)
+        self._build_infix_telemetry(self.frame_infix_info)
 
         self.frame_sq_info.pack(fill=tk.BOTH, expand=True)
 
@@ -2127,6 +2245,11 @@ class BlockyDSAWorldApp(tk.Tk):
             self.on_bst_load_sample()
             return
 
+        if scenario_type == "INFIX":
+            self.switch_mode("INFIX")
+            self.on_infix_sample("A+B*(C-D)")
+            return
+
         self.stack.clear()
         self.queue.clear()
 
@@ -2154,6 +2277,1044 @@ class BlockyDSAWorldApp(tk.Tk):
         self.visualizer.redraw()
         self._update_info_panel(msg)
 
+    # -------------------------------------------------------------------------
+    # INFIX TO POSTFIX KINGDOM — CONTROLS & TELEMETRY
+    # -------------------------------------------------------------------------
+    def _build_infix_controls(self, parent: tk.Frame) -> None:
+        """Constructs left control deck for Infix to Postfix Kingdom."""
+        canvas = tk.Canvas(parent, bg="#F8FAFC", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        scroll_frame = tk.Frame(canvas, bg="#F8FAFC")
+
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind("<Enter>", lambda _: canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        canvas.bind("<Leave>", lambda _: canvas.unbind_all("<MouseWheel>"))
+
+        tk.Label(
+            scroll_frame,
+            text="👑 INFIX TO POSTFIX ARENA",
+            font=("Segoe UI", 11, "bold"),
+            fg="#0F172A",
+            bg="#F8FAFC"
+        ).pack(anchor="w", padx=12, pady=(10, 4))
+
+        # --- SECTION 1: CUSTOM EXPRESSION INPUT ---
+        card_input = tk.LabelFrame(
+            scroll_frame,
+            text=" 📝 Expression Input ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#D97706",
+            bg="#F8FAFC",
+            padx=8,
+            pady=6
+        )
+        card_input.pack(fill=tk.X, padx=10, pady=4)
+
+        tk.Label(
+            card_input,
+            text="Enter custom infix expression:",
+            font=("Segoe UI", 8),
+            fg="#64748B",
+            bg="#F8FAFC"
+        ).pack(anchor="w")
+
+        self.entry_infix_expr = tk.Entry(
+            card_input,
+            font=("Segoe UI", 10, "bold"),
+            bg="#FFFFFF",
+            fg="#0F172A",
+            relief="solid",
+            bd=1
+        )
+        self.entry_infix_expr.pack(fill=tk.X, pady=(3, 6))
+        self.entry_infix_expr.insert(0, "A+B*C")
+        self.entry_infix_expr.bind("<Return>", lambda e: self.on_infix_convert())
+
+        btn_row = tk.Frame(card_input, bg="#F8FAFC")
+        btn_row.pack(fill=tk.X)
+
+        tk.Button(
+            btn_row,
+            text="⚡ Convert & Load",
+            font=("Segoe UI", 9, "bold"),
+            bg="#D97706",
+            fg="#FFFFFF",
+            activebackground="#B45309",
+            cursor="hand2",
+            relief="flat",
+            padx=10,
+            pady=4,
+            command=self.on_infix_convert
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
+
+        tk.Button(
+            btn_row,
+            text="Clear",
+            font=("Segoe UI", 8),
+            bg="#E2E8F0",
+            fg="#334155",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=4,
+            command=self.on_infix_convert_another
+        ).pack(side=tk.RIGHT)
+
+        # --- SECTION 2: UNIVERSITY BENCHMARK EXPRESSIONS ---
+        card_samples = tk.LabelFrame(
+            scroll_frame,
+            text=" 📋 Sample Benchmark Expressions ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#0284C7",
+            bg="#F8FAFC",
+            padx=8,
+            pady=6
+        )
+        card_samples.pack(fill=tk.X, padx=10, pady=4)
+
+        sample_grid = tk.Frame(card_samples, bg="#F8FAFC")
+        sample_grid.pack(fill=tk.X)
+
+        samples = [
+            ("A+B*C", 0, 0),
+            ("(A+B)*C", 0, 1),
+            ("A+B*(C-D)", 1, 0),
+            ("A^B^C", 1, 1),
+            ("(A+B)*(C-D)", 2, 0),
+            ("A+B*C-D/E", 2, 1),
+        ]
+        for expr_str, r, c in samples:
+            btn = tk.Button(
+                sample_grid,
+                text=expr_str,
+                font=("Segoe UI", 8, "bold"),
+                bg="#F1F5F9",
+                fg="#0F172A",
+                activebackground="#E2E8F0",
+                cursor="hand2",
+                relief="groove",
+                bd=1,
+                padx=4,
+                pady=3,
+                command=lambda s=expr_str: self.on_infix_sample(s)
+            )
+            btn.grid(row=r, column=c, sticky="ew", padx=2, pady=2)
+        sample_grid.grid_columnconfigure(0, weight=1)
+        sample_grid.grid_columnconfigure(1, weight=1)
+
+        # --- SECTION 3: ANIMATION PLAYER & STEP CONTROLS ---
+        card_anim = tk.LabelFrame(
+            scroll_frame,
+            text=" 🕹 Animation & Step Controls ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#16A34A",
+            bg="#F8FAFC",
+            padx=8,
+            pady=6
+        )
+        card_anim.pack(fill=tk.X, padx=10, pady=4)
+
+        self.lbl_infix_step_counter = tk.Label(
+            card_anim,
+            text="Step: 0 / 0",
+            font=("Segoe UI", 9, "bold"),
+            fg="#0F172A",
+            bg="#F8FAFC"
+        )
+        self.lbl_infix_step_counter.pack(anchor="w", pady=(0, 4))
+
+        anim_btn_row1 = tk.Frame(card_anim, bg="#F8FAFC")
+        anim_btn_row1.pack(fill=tk.X, pady=2)
+
+        self.btn_infix_play_pause = tk.Button(
+            anim_btn_row1,
+            text="▶ Play",
+            font=("Segoe UI", 9, "bold"),
+            bg="#16A34A",
+            fg="#FFFFFF",
+            activebackground="#15803D",
+            cursor="hand2",
+            relief="flat",
+            padx=8,
+            pady=3,
+            command=self.on_infix_play_pause
+        )
+        self.btn_infix_play_pause.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=1)
+
+        tk.Button(
+            anim_btn_row1,
+            text="⏮ Prev",
+            font=("Segoe UI", 8),
+            bg="#E2E8F0",
+            fg="#0F172A",
+            activebackground="#CBD5E1",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=3,
+            command=self.on_infix_prev_step
+        ).pack(side=tk.LEFT, padx=1)
+
+        tk.Button(
+            anim_btn_row1,
+            text="⏭ Next",
+            font=("Segoe UI", 8, "bold"),
+            bg="#0284C7",
+            fg="#FFFFFF",
+            activebackground="#0369A1",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=3,
+            command=lambda: self.on_infix_next_step(from_play=False)
+        ).pack(side=tk.LEFT, padx=1)
+
+        anim_btn_row2 = tk.Frame(card_anim, bg="#F8FAFC")
+        anim_btn_row2.pack(fill=tk.X, pady=2)
+
+        tk.Button(
+            anim_btn_row2,
+            text="⏭ Skip to Result",
+            font=("Segoe UI", 8),
+            bg="#475569",
+            fg="#FFFFFF",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=2,
+            command=self.on_infix_skip_to_end
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=1)
+
+        tk.Button(
+            anim_btn_row2,
+            text="🔄 Reset Arena",
+            font=("Segoe UI", 8),
+            bg="#64748B",
+            fg="#FFFFFF",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=2,
+            command=self.on_infix_reset
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=1)
+
+        # Speed slider
+        speed_frame = tk.Frame(card_anim, bg="#F8FAFC")
+        speed_frame.pack(fill=tk.X, pady=(6, 2))
+
+        self.lbl_infix_speed_val = tk.Label(
+            speed_frame,
+            text="Speed: 400ms",
+            font=("Segoe UI", 8),
+            fg="#64748B",
+            bg="#F8FAFC"
+        )
+        self.lbl_infix_speed_val.pack(anchor="w")
+
+        slider = ttk.Scale(
+            speed_frame,
+            from_=0,
+            to=900,
+            orient=tk.HORIZONTAL,
+            command=self.on_infix_speed_change
+        )
+        slider.set(400)
+        slider.pack(fill=tk.X)
+
+        # --- SECTION 4: POSTFIX OUTPUT & ACTIONS ---
+        card_out = tk.LabelFrame(
+            scroll_frame,
+            text=" 🚀 Postfix Result & Actions ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#7C3AED",
+            bg="#F8FAFC",
+            padx=8,
+            pady=6
+        )
+        card_out.pack(fill=tk.X, padx=10, pady=4)
+
+        self.entry_infix_result = tk.Entry(
+            card_out,
+            font=("Segoe UI", 10, "bold"),
+            bg="#F1F5F9",
+            fg="#7C3AED",
+            relief="solid",
+            bd=1
+        )
+        self.entry_infix_result.pack(fill=tk.X, pady=(2, 6))
+
+        out_actions_row1 = tk.Frame(card_out, bg="#F8FAFC")
+        out_actions_row1.pack(fill=tk.X, pady=2)
+
+        tk.Button(
+            out_actions_row1,
+            text="📋 Copy Result",
+            font=("Segoe UI", 8, "bold"),
+            bg="#7C3AED",
+            fg="#FFFFFF",
+            activebackground="#6D28D9",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=3,
+            command=self.on_infix_copy_result
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=1)
+
+        tk.Button(
+            out_actions_row1,
+            text="🔁 Replay",
+            font=("Segoe UI", 8),
+            bg="#E2E8F0",
+            fg="#0F172A",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=3,
+            command=self.on_infix_replay
+        ).pack(side=tk.LEFT, padx=1)
+
+        out_actions_row2 = tk.Frame(card_out, bg="#F8FAFC")
+        out_actions_row2.pack(fill=tk.X, pady=2)
+
+        tk.Button(
+            out_actions_row2,
+            text="🎓 Infix Masterclass Guide",
+            font=("Segoe UI", 8, "bold"),
+            bg="#D97706",
+            fg="#FFFFFF",
+            activebackground="#B45309",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=3,
+            command=self.open_infix_learning_mode
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=1)
+
+        # --- SECTION 5: CHALLENGE MODE (PRACTICE) ---
+        card_challenge = tk.LabelFrame(
+            scroll_frame,
+            text=" 🏆 Challenge Mode (Predict Postfix) ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#DC2626",
+            bg="#F8FAFC",
+            padx=8,
+            pady=6
+        )
+        card_challenge.pack(fill=tk.X, padx=10, pady=4)
+
+        diff_row = tk.Frame(card_challenge, bg="#F8FAFC")
+        diff_row.pack(fill=tk.X, pady=(0, 4))
+
+        tk.Label(diff_row, text="Difficulty:", font=("Segoe UI", 8), fg="#64748B", bg="#F8FAFC").pack(side=tk.LEFT)
+
+        self.diff_var = tk.StringVar(value="medium")
+        for d in ("easy", "medium", "hard"):
+            rb = tk.Radiobutton(
+                diff_row,
+                text=d.capitalize(),
+                value=d,
+                variable=self.diff_var,
+                font=("Segoe UI", 7),
+                bg="#F8FAFC",
+                command=lambda: setattr(self, "challenge_difficulty", self.diff_var.get())
+            )
+            rb.pack(side=tk.LEFT, padx=1)
+
+        tk.Button(
+            card_challenge,
+            text="🎲 New Challenge",
+            font=("Segoe UI", 8, "bold"),
+            bg="#DC2626",
+            fg="#FFFFFF",
+            activebackground="#B91C1C",
+            cursor="hand2",
+            relief="flat",
+            padx=8,
+            pady=3,
+            command=self.on_challenge_new
+        ).pack(fill=tk.X, pady=(2, 4))
+
+        self.lbl_challenge_prompt = tk.Label(
+            card_challenge,
+            text="Click 'New Challenge' to generate a question!",
+            font=("Segoe UI", 8, "bold"),
+            fg="#0F172A",
+            bg="#F8FAFC",
+            wraplength=250,
+            justify="left"
+        )
+        self.lbl_challenge_prompt.pack(anchor="w", pady=(0, 2))
+
+        self.entry_challenge_answer = tk.Entry(
+            card_challenge,
+            font=("Segoe UI", 9),
+            bg="#FFFFFF",
+            relief="solid",
+            bd=1
+        )
+        self.entry_challenge_answer.pack(fill=tk.X, pady=2)
+        self.entry_challenge_answer.bind("<Return>", lambda e: self.on_challenge_submit())
+
+        ch_btn_row = tk.Frame(card_challenge, bg="#F8FAFC")
+        ch_btn_row.pack(fill=tk.X, pady=2)
+
+        tk.Button(
+            ch_btn_row,
+            text="✅ Check Answer",
+            font=("Segoe UI", 8, "bold"),
+            bg="#16A34A",
+            fg="#FFFFFF",
+            activebackground="#15803D",
+            cursor="hand2",
+            relief="flat",
+            padx=6,
+            pady=2,
+            command=self.on_challenge_submit
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=1)
+
+        tk.Button(
+            ch_btn_row,
+            text="🔍 Watch Solution",
+            font=("Segoe UI", 8),
+            bg="#E2E8F0",
+            fg="#334155",
+            cursor="hand2",
+            relief="flat",
+            padx=4,
+            pady=2,
+            command=self.on_challenge_watch_solution
+        ).pack(side=tk.LEFT, padx=1)
+
+        self.lbl_challenge_feedback = tk.Label(
+            card_challenge,
+            text="",
+            font=("Segoe UI", 8),
+            fg="#64748B",
+            bg="#F8FAFC",
+            wraplength=250,
+            justify="left"
+        )
+        self.lbl_challenge_feedback.pack(anchor="w", pady=(2, 0))
+
+        self.lbl_challenge_score = tk.Label(
+            card_challenge,
+            text="Score: 0 / 0 (0%)",
+            font=("Segoe UI", 8, "bold"),
+            fg="#0F172A",
+            bg="#F8FAFC"
+        )
+        self.lbl_challenge_score.pack(anchor="w", pady=(2, 0))
+
+        # --- SECTION 6: RETURN PORTAL BUTTON ---
+        tk.Button(
+            scroll_frame,
+            text="🚪 Return to Main DSA World",
+            font=("Segoe UI", 9, "bold"),
+            bg="#334155",
+            fg="#F8FAFC",
+            activebackground="#475569",
+            cursor="hand2",
+            relief="flat",
+            padx=10,
+            pady=6,
+            command=lambda: self.switch_mode("STACK_QUEUE")
+        ).pack(fill=tk.X, padx=10, pady=(8, 15))
+
+    def _build_infix_telemetry(self, parent: tk.Frame) -> None:
+        """Constructs right telemetry panel for Infix to Postfix Kingdom."""
+        canvas = tk.Canvas(parent, bg="#F8FAFC", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        scroll_frame = tk.Frame(canvas, bg="#F8FAFC")
+
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind("<Enter>", lambda _: canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        canvas.bind("<Leave>", lambda _: canvas.unbind_all("<MouseWheel>"))
+
+        tk.Label(
+            scroll_frame,
+            text="📊 TELEMETRY & TRACE DECK",
+            font=("Segoe UI", 11, "bold"),
+            fg="#0F172A",
+            bg="#F8FAFC"
+        ).pack(anchor="w", padx=12, pady=(10, 4))
+
+        # --- CARD 1: LIVE STEP TELEMETRY ---
+        card_live = tk.LabelFrame(
+            scroll_frame,
+            text=" ⚡ Active Conversion Step ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#D97706",
+            bg="#F8FAFC",
+            padx=8,
+            pady=6
+        )
+        card_live.pack(fill=tk.X, padx=10, pady=4)
+
+        self.lbl_infix_step_num = tk.Label(card_live, text="Step: 0 / 0", font=("Segoe UI", 8, "bold"), fg="#0F172A", bg="#F8FAFC")
+        self.lbl_infix_step_num.pack(anchor="w")
+
+        self.lbl_infix_curr_token = tk.Label(card_live, text="Current Token: [ None ]", font=("Segoe UI", 8), fg="#0284C7", bg="#F8FAFC")
+        self.lbl_infix_curr_token.pack(anchor="w")
+
+        self.lbl_infix_action_type = tk.Label(card_live, text="Action: Ready", font=("Segoe UI", 8, "bold"), fg="#16A34A", bg="#F8FAFC")
+        self.lbl_infix_action_type.pack(anchor="w")
+
+        self.lbl_infix_stack_contents = tk.Label(card_live, text="Stack (bottom -> top): [ ]", font=("Segoe UI", 8), fg="#0F172A", bg="#F8FAFC")
+        self.lbl_infix_stack_contents.pack(anchor="w")
+
+        self.lbl_infix_postfix_output = tk.Label(card_live, text="Postfix Output: [ ]", font=("Segoe UI", 8, "bold"), fg="#7C3AED", bg="#F8FAFC")
+        self.lbl_infix_postfix_output.pack(anchor="w")
+
+        tk.Label(card_live, text="Explanation:", font=("Segoe UI", 8, "bold"), fg="#475569", bg="#F8FAFC").pack(anchor="w", pady=(3, 0))
+        self.lbl_infix_explanation_text = tk.Label(card_live, text="Enter an expression to begin.", font=("Segoe UI", 8), fg="#0F172A", bg="#F8FAFC", wraplength=260, justify="left")
+        self.lbl_infix_explanation_text.pack(anchor="w")
+
+        tk.Label(card_live, text="Reason (Precedence/Associativity):", font=("Segoe UI", 8, "bold"), fg="#475569", bg="#F8FAFC").pack(anchor="w", pady=(3, 0))
+        self.lbl_infix_reason_text = tk.Label(card_live, text="Operands pass directly to output; operators wait on stack.", font=("Segoe UI", 7, "italic"), fg="#0284C7", bg="#F8FAFC", wraplength=260, justify="left")
+        self.lbl_infix_reason_text.pack(anchor="w")
+
+        # --- CARD 2: COMPLEXITY INFORMATION ---
+        card_comp = tk.LabelFrame(
+            scroll_frame,
+            text=" ⏱ Complexity Specification ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#16A34A",
+            bg="#F8FAFC",
+            padx=8,
+            pady=6
+        )
+        card_comp.pack(fill=tk.X, padx=10, pady=4)
+
+        tk.Label(card_comp, text="• Time Complexity: O(n)", font=("Segoe UI", 8, "bold"), fg="#16A34A", bg="#F8FAFC").pack(anchor="w")
+        tk.Label(card_comp, text="• Auxiliary Space: O(n)", font=("Segoe UI", 8, "bold"), fg="#16A34A", bg="#F8FAFC").pack(anchor="w")
+        tk.Label(
+            card_comp,
+            text="n is the number of tokens. Tokenization is linear O(n). Each token is pushed and popped at most once, strictly guaranteeing O(n) total runtime and memory.",
+            font=("Segoe UI", 7),
+            fg="#64748B",
+            bg="#F8FAFC",
+            wraplength=260,
+            justify="left"
+        ).pack(anchor="w", pady=(2, 0))
+
+        # --- CARD 3: OPERATOR PRECEDENCE TABLE ---
+        card_prec = tk.LabelFrame(
+            scroll_frame,
+            text=" 📐 Operator Precedence & Associativity ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#0284C7",
+            bg="#F8FAFC",
+            padx=6,
+            pady=4
+        )
+        card_prec.pack(fill=tk.X, padx=10, pady=4)
+
+        prec_data = [
+            ("(", "Scope Boundary", "—"),
+            ("^", "3 (Highest)", "Right (R)"),
+            ("*, /, %", "2 (Medium)", "Left (L)"),
+            ("+, -", "1 (Lowest)", "Left (L)"),
+        ]
+        p_table = tk.Frame(card_prec, bg="#F8FAFC")
+        p_table.pack(fill=tk.X)
+
+        tk.Label(p_table, text="Op", font=("Segoe UI", 7, "bold"), fg="#64748B", bg="#F8FAFC", width=5, anchor="w").grid(row=0, column=0)
+        tk.Label(p_table, text="Precedence", font=("Segoe UI", 7, "bold"), fg="#64748B", bg="#F8FAFC", width=12, anchor="w").grid(row=0, column=1)
+        tk.Label(p_table, text="Associativity", font=("Segoe UI", 7, "bold"), fg="#64748B", bg="#F8FAFC", width=10, anchor="w").grid(row=0, column=2)
+
+        for idx, (op_sym, prec_val, assoc_val) in enumerate(prec_data, start=1):
+            tk.Label(p_table, text=op_sym, font=("Consolas", 8, "bold"), fg="#0F172A", bg="#F8FAFC", anchor="w").grid(row=idx, column=0, sticky="w")
+            tk.Label(p_table, text=prec_val, font=("Segoe UI", 7), fg="#0F172A", bg="#F8FAFC", anchor="w").grid(row=idx, column=1, sticky="w")
+            tk.Label(p_table, text=assoc_val, font=("Segoe UI", 7), fg="#D97706" if "Right" in assoc_val else "#0F172A", bg="#F8FAFC", anchor="w").grid(row=idx, column=2, sticky="w")
+
+        # --- CARD 4: CONVERSION STEP TRACE TABLE ---
+        card_trace = tk.LabelFrame(
+            scroll_frame,
+            text=" 📜 Full Step Trace (Click to Jump) ",
+            font=("Segoe UI", 9, "bold"),
+            fg="#7C3AED",
+            bg="#F8FAFC",
+            padx=6,
+            pady=4
+        )
+        card_trace.pack(fill=tk.BOTH, expand=True, padx=10, pady=(4, 15))
+
+        tree_frame = tk.Frame(card_trace, bg="#F8FAFC")
+        tree_frame.pack(fill=tk.BOTH, expand=True)
+
+        columns = ("step", "tok", "action")
+        self.history_tree_infix = ttk.Treeview(
+            tree_frame,
+            columns=columns,
+            show="headings",
+            height=6,
+            selectmode="browse"
+        )
+        self.history_tree_infix.heading("step", text="#")
+        self.history_tree_infix.heading("tok", text="Token")
+        self.history_tree_infix.heading("action", text="Action Summary")
+
+        self.history_tree_infix.column("step", width=25, anchor="center")
+        self.history_tree_infix.column("tok", width=45, anchor="center")
+        self.history_tree_infix.column("action", width=190, anchor="w")
+
+        tree_scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=self.history_tree_infix.yview)
+        self.history_tree_infix.configure(yscrollcommand=tree_scroll.set)
+
+        self.history_tree_infix.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.history_tree_infix.bind("<<TreeviewSelect>>", self._on_infix_trace_selected)
+
+    # -------------------------------------------------------------------------
+    # INFIX CONVERSION ENGINE & ANIMATION HANDLERS
+    # -------------------------------------------------------------------------
+    def on_infix_convert(self, expr: Optional[str] = None) -> None:
+        """Parses and validates infix expression, generating full animation steps."""
+        if expr is None:
+            raw_expr = self.entry_infix_expr.get().strip() if self.entry_infix_expr else "A+B*C"
+        else:
+            raw_expr = expr.strip()
+
+        if self.infix_is_playing:
+            self.on_infix_play_pause()
+
+        self.infix_current_expr = raw_expr
+
+        # Validate
+        is_valid, err_msg, tokens = validate_expression(raw_expr)
+        if not is_valid:
+            self.infix_error = err_msg
+            self.infix_tokens = []
+            self.infix_steps = []
+            self.infix_current_step_idx = 0
+            self.infix_last_result = ""
+
+            self.visualizer.set_infix_state(
+                tokens=[],
+                active_token_idx=-1,
+                stack_items=[],
+                postfix_items=[],
+                current_step=None,
+                step_index=0,
+                total_steps=0,
+                error_msg=err_msg
+            )
+            if self.entry_infix_result:
+                self.entry_infix_result.delete(0, tk.END)
+            self._update_infix_telemetry()
+            messagebox.showerror("Expression Syntax Error", err_msg, parent=self)
+            return
+
+        self.infix_error = None
+        ok, conv_err, postfix_toks, steps = self.infix_converter.convert(raw_expr)
+        if not ok:
+            messagebox.showerror("Conversion Error", conv_err or "Unknown conversion error", parent=self)
+            return
+
+        self.infix_tokens = [tok.value for tok in tokens]
+        self.infix_steps = steps
+        self.infix_current_step_idx = 0
+        self.infix_last_result = " ".join(postfix_toks)
+
+        if self.entry_infix_result:
+            self.entry_infix_result.delete(0, tk.END)
+            self.entry_infix_result.insert(0, self.infix_last_result)
+
+        # Repopulate History Treeview
+        if self.history_tree_infix:
+            for item in self.history_tree_infix.get_children():
+                self.history_tree_infix.delete(item)
+            for idx, s in enumerate(self.infix_steps):
+                self.history_tree_infix.insert("", tk.END, iid=str(idx), values=(s.step_number, s.token, s.action_summary))
+
+        first_step = self.infix_steps[0] if self.infix_steps else None
+        self.visualizer.set_infix_state(
+            tokens=self.infix_tokens,
+            active_token_idx=0,
+            stack_items=first_step.stack_snapshot if first_step else [],
+            postfix_items=first_step.postfix_snapshot if first_step else [],
+            current_step=first_step,
+            step_index=0,
+            total_steps=len(self.infix_steps) - 1 if self.infix_steps else 0
+        )
+        self.visualizer.set_speech(f"Expression loaded: {len(self.infix_tokens)} tokens! Click 'Play' or 'Next' to step through.")
+        self._update_infix_telemetry()
+
+    def on_infix_sample(self, sample_expr: str) -> None:
+        """Loads a predefined benchmark expression."""
+        if self.entry_infix_expr:
+            self.entry_infix_expr.delete(0, tk.END)
+            self.entry_infix_expr.insert(0, sample_expr)
+        self.on_infix_convert(sample_expr)
+
+    def on_infix_play_pause(self) -> None:
+        """Toggles between animated continuous playback and paused state."""
+        if self.infix_is_playing:
+            self.infix_is_playing = False
+            if self.infix_timer_id:
+                try:
+                    self.after_cancel(self.infix_timer_id)
+                except Exception:
+                    pass
+                self.infix_timer_id = None
+            if self.btn_infix_play_pause:
+                self.btn_infix_play_pause.configure(text="▶ Play", bg="#16A34A")
+        else:
+            if not self.infix_steps:
+                self.on_infix_convert()
+                return
+
+            if self.infix_current_step_idx >= len(self.infix_steps) - 1:
+                # Rewind to start
+                self.infix_current_step_idx = 0
+
+            self.infix_is_playing = True
+            if self.btn_infix_play_pause:
+                self.btn_infix_play_pause.configure(text="⏸ Pause", bg="#EAB308")
+            self._infix_play_loop()
+
+    def _infix_play_loop(self) -> None:
+        """Recurring tick for auto-play animation."""
+        if not self.infix_is_playing:
+            return
+
+        if self.infix_current_step_idx < len(self.infix_steps) - 1:
+            self.on_infix_next_step(from_play=True)
+        else:
+            self.infix_is_playing = False
+            if self.btn_infix_play_pause:
+                self.btn_infix_play_pause.configure(text="▶ Play", bg="#16A34A")
+
+    def on_infix_next_step(self, from_play: bool = False) -> None:
+        """Advances the conversion by one pedagogical step."""
+        if not self.infix_steps:
+            self.on_infix_convert()
+            return
+
+        if not from_play and self.visualizer.is_animating:
+            return
+
+        if self.infix_current_step_idx < len(self.infix_steps) - 1:
+            self.infix_current_step_idx += 1
+            step = self.infix_steps[self.infix_current_step_idx]
+
+            # Calculate active token index in scanner stream
+            active_idx = -1
+            if step.token in self.infix_tokens:
+                active_idx = self.infix_tokens.index(step.token)
+
+            def _step_completed():
+                self.visualizer.set_infix_state(
+                    tokens=self.infix_tokens,
+                    active_token_idx=active_idx,
+                    stack_items=step.stack_snapshot,
+                    postfix_items=step.postfix_snapshot,
+                    current_step=step,
+                    step_index=self.infix_current_step_idx,
+                    total_steps=len(self.infix_steps) - 1
+                )
+                self._update_infix_telemetry()
+
+                if from_play and self.infix_is_playing:
+                    self.infix_timer_id = self.after(max(40, self.infix_speed_ms), self._infix_play_loop)
+
+            self.visualizer.animate_infix_step(step, _step_completed, speed_ms=self.infix_speed_ms)
+            self._update_infix_telemetry()
+        else:
+            if from_play:
+                self.infix_is_playing = False
+                if self.btn_infix_play_pause:
+                    self.btn_infix_play_pause.configure(text="▶ Play", bg="#16A34A")
+            self.visualizer.set_speech(f"Conversion complete! Result: {self.infix_last_result}")
+
+    def on_infix_prev_step(self) -> None:
+        """Steps backwards to the previous state."""
+        if self.infix_is_playing:
+            self.on_infix_play_pause()
+
+        if self.infix_current_step_idx > 0:
+            self.infix_current_step_idx -= 1
+            step = self.infix_steps[self.infix_current_step_idx]
+            active_idx = self.infix_tokens.index(step.token) if step.token in self.infix_tokens else -1
+
+            self.visualizer.set_infix_state(
+                tokens=self.infix_tokens,
+                active_token_idx=active_idx,
+                stack_items=step.stack_snapshot,
+                postfix_items=step.postfix_snapshot,
+                current_step=step,
+                step_index=self.infix_current_step_idx,
+                total_steps=len(self.infix_steps) - 1
+            )
+            self._update_infix_telemetry()
+
+    def on_infix_skip_to_end(self) -> None:
+        """Instantly jumps to the final completed state."""
+        if self.infix_is_playing:
+            self.on_infix_play_pause()
+
+        if not self.infix_steps:
+            self.on_infix_convert()
+            return
+
+        self.infix_current_step_idx = len(self.infix_steps) - 1
+        step = self.infix_steps[-1]
+
+        self.visualizer.set_infix_state(
+            tokens=self.infix_tokens,
+            active_token_idx=len(self.infix_tokens) - 1,
+            stack_items=step.stack_snapshot,
+            postfix_items=step.postfix_snapshot,
+            current_step=step,
+            step_index=self.infix_current_step_idx,
+            total_steps=len(self.infix_steps) - 1
+        )
+        self.visualizer.set_speech(f"Skipped to result: {self.infix_last_result}")
+        self._update_infix_telemetry()
+
+    def on_infix_reset(self) -> None:
+        """Resets the arena to initial state."""
+        if self.infix_is_playing:
+            self.on_infix_play_pause()
+
+        if self.infix_steps:
+            self.infix_current_step_idx = 0
+            step = self.infix_steps[0]
+            self.visualizer.set_infix_state(
+                tokens=self.infix_tokens,
+                active_token_idx=0,
+                stack_items=step.stack_snapshot,
+                postfix_items=step.postfix_snapshot,
+                current_step=step,
+                step_index=0,
+                total_steps=len(self.infix_steps) - 1
+            )
+            self.visualizer.set_speech("Arena reset to step 0. Ready to convert!")
+            self._update_infix_telemetry()
+        else:
+            self.visualizer.set_infix_state([], -1, [], [], None, 0, 0)
+
+    def on_infix_speed_change(self, val: str) -> None:
+        """Handles animation speed slider adjustments."""
+        self.infix_speed_ms = int(float(val))
+        if self.lbl_infix_speed_val:
+            if self.infix_speed_ms == 0:
+                self.lbl_infix_speed_val.configure(text="Speed: Instant (0ms)")
+            else:
+                self.lbl_infix_speed_val.configure(text=f"Speed: {self.infix_speed_ms}ms")
+
+    def on_infix_copy_result(self) -> None:
+        """Copies the final postfix expression to the OS clipboard."""
+        if not self.infix_last_result:
+            messagebox.showwarning("No Result", "No postfix result to copy. Please convert an expression first!", parent=self)
+            return
+
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(self.infix_last_result)
+            self.update()
+            messagebox.showinfo("Copied to Clipboard", f"Successfully copied postfix result:\n\n{self.infix_last_result}", parent=self)
+        except Exception as e:
+            messagebox.showerror("Clipboard Error", f"Could not access clipboard: {e}", parent=self)
+
+    def on_infix_convert_another(self) -> None:
+        """Clears the entry field and prompts for another expression."""
+        if self.entry_infix_expr:
+            self.entry_infix_expr.delete(0, tk.END)
+            self.entry_infix_expr.focus_set()
+        if self.entry_infix_result:
+            self.entry_infix_result.delete(0, tk.END)
+        self.visualizer.set_speech("Ready for your next expression! Type it in the entry box above.")
+
+    def on_infix_replay(self) -> None:
+        """Rewinds conversion to start and begins animation replay."""
+        self.on_infix_reset()
+        self.on_infix_play_pause()
+
+    def open_infix_learning_mode(self) -> None:
+        """Opens dedicated Infix to Postfix Masterclass modal."""
+        InfixLearningDialog(self)
+
+    # -------------------------------------------------------------------------
+    # CHALLENGE MODE (PRACTICE VIVA / EXAM)
+    # -------------------------------------------------------------------------
+    def on_challenge_new(self) -> None:
+        """Generates a new random expression for the player to solve."""
+        expr, expected = generate_random_expression(self.challenge_difficulty)
+        self.challenge_target_expr = expr
+        self.challenge_expected_postfix = expected
+
+        if self.lbl_challenge_prompt:
+            self.lbl_challenge_prompt.configure(
+                text=f"Target Infix:  {expr}",
+                fg="#0F172A"
+            )
+        if self.entry_challenge_answer:
+            self.entry_challenge_answer.delete(0, tk.END)
+            self.entry_challenge_answer.focus_set()
+
+        if self.lbl_challenge_feedback:
+            self.lbl_challenge_feedback.configure(
+                text="Predict the postfix result (space-separated tokens) and submit!",
+                fg="#64748B"
+            )
+        self.visualizer.set_speech(f"New Challenge! Predict the postfix result for: {expr}")
+
+    def on_challenge_submit(self) -> None:
+        """Validates player's predicted postfix answer against ground truth."""
+        if not self.challenge_target_expr:
+            self.on_challenge_new()
+            return
+
+        user_input = self.entry_challenge_answer.get().strip() if self.entry_challenge_answer else ""
+        if not user_input:
+            if self.lbl_challenge_feedback:
+                self.lbl_challenge_feedback.configure(text="⚠️ Please type your answer before checking!", fg="#D97706")
+            return
+
+        user_tokens = user_input.split()
+        expected_tokens = self.challenge_expected_postfix.split()
+
+        self.challenge_attempts += 1
+        is_correct = (user_tokens == expected_tokens)
+
+        if is_correct:
+            self.challenge_correct += 1
+            feedback_msg = f"🎉 CORRECT! Exact match: '{self.challenge_expected_postfix}'"
+            feedback_col = "#16A34A"
+            self.visualizer.set_speech("Brilliant! Your postfix prediction is 100% correct!")
+        else:
+            feedback_msg = f"❌ Incorrect. Expected: '{self.challenge_expected_postfix}', Got: '{user_input}'"
+            feedback_col = "#DC2626"
+            self.visualizer.set_speech(f"Not quite! The correct postfix is '{self.challenge_expected_postfix}'. Click 'Watch Solution' to see why.")
+
+        if self.lbl_challenge_feedback:
+            self.lbl_challenge_feedback.configure(text=feedback_msg, fg=feedback_col)
+
+        pct = int((self.challenge_correct / self.challenge_attempts) * 100) if self.challenge_attempts > 0 else 0
+        if self.lbl_challenge_score:
+            self.lbl_challenge_score.configure(
+                text=f"Score: {self.challenge_correct} / {self.challenge_attempts} ({pct}% accuracy)"
+            )
+
+    def on_challenge_watch_solution(self) -> None:
+        """Loads challenge target expression directly into the 3D converter."""
+        if not self.challenge_target_expr:
+            self.on_challenge_new()
+        self.on_infix_sample(self.challenge_target_expr)
+
+    def _on_infix_trace_selected(self, event) -> None:
+        """Jumps directly to a step clicked in the history trace treeview."""
+        if not self.history_tree_infix or not self.infix_steps:
+            return
+
+        if getattr(self, "_programmatic_tree_select", False) or getattr(self, "_is_updating_infix_telemetry", False):
+            return
+
+        selected_items = self.history_tree_infix.selection()
+        if not selected_items:
+            return
+
+        step_id_str = selected_items[0]
+        try:
+            target_idx = int(step_id_str)
+            target_idx = max(0, min(target_idx, len(self.infix_steps) - 1))
+            if target_idx == self.infix_current_step_idx:
+                return
+
+            self.infix_current_step_idx = target_idx
+            step = self.infix_steps[target_idx]
+            active_idx = self.infix_tokens.index(step.token) if step.token in self.infix_tokens else -1
+
+            self.visualizer.set_infix_state(
+                tokens=self.infix_tokens,
+                active_token_idx=active_idx,
+                stack_items=step.stack_snapshot,
+                postfix_items=step.postfix_snapshot,
+                current_step=step,
+                step_index=self.infix_current_step_idx,
+                total_steps=len(self.infix_steps) - 1
+            )
+            self._update_infix_telemetry()
+        except ValueError:
+            pass
+
+    def _update_infix_telemetry(self) -> None:
+        """Synchronizes right-panel telemetry with current conversion state."""
+        if getattr(self, "_is_updating_infix_telemetry", False):
+            return
+
+        self._is_updating_infix_telemetry = True
+        try:
+            total = len(self.infix_steps) - 1 if self.infix_steps else 0
+            cur = self.infix_current_step_idx
+
+            if self.lbl_infix_step_counter:
+                self.lbl_infix_step_counter.configure(text=f"Step: {cur} / {total}")
+
+            if self.lbl_infix_step_num:
+                self.lbl_infix_step_num.configure(text=f"Step: {cur} / {total}")
+
+            if self.infix_steps and 0 <= cur < len(self.infix_steps):
+                step = self.infix_steps[cur]
+
+                if self.lbl_infix_curr_token:
+                    self.lbl_infix_curr_token.configure(text=f"Current Token: [ '{step.token}' ]")
+                if self.lbl_infix_action_type:
+                    self.lbl_infix_action_type.configure(text=f"Action: {step.action_summary}")
+                if self.lbl_infix_stack_contents:
+                    self.lbl_infix_stack_contents.configure(text=f"Stack (bottom -> top): {step.stack_snapshot}")
+                if self.lbl_infix_postfix_output:
+                    self.lbl_infix_postfix_output.configure(text=f"Postfix Output: {' '.join(step.postfix_snapshot)}")
+                if self.lbl_infix_explanation_text:
+                    self.lbl_infix_explanation_text.configure(text=step.explanation)
+                if self.lbl_infix_reason_text:
+                    self.lbl_infix_reason_text.configure(text=f"💡 {step.reason}")
+
+                # Highlight current row in treeview
+                if self.history_tree_infix:
+                    row_id = str(cur)
+                    if self.history_tree_infix.exists(row_id):
+                        if self.history_tree_infix.selection() != (row_id,):
+                            self._programmatic_tree_select = True
+                            self.history_tree_infix.selection_set(row_id)
+                            self.history_tree_infix.see(row_id)
+                            self.after_idle(lambda: setattr(self, "_programmatic_tree_select", False))
+            elif self.infix_error:
+                if self.lbl_infix_curr_token:
+                    self.lbl_infix_curr_token.configure(text="Current Token: [ Error ]")
+                if self.lbl_infix_action_type:
+                    self.lbl_infix_action_type.configure(text="Action: Syntax Error")
+                if self.lbl_infix_explanation_text:
+                    self.lbl_infix_explanation_text.configure(text=self.infix_error)
+                if self.lbl_infix_reason_text:
+                    self.lbl_infix_reason_text.configure(text="Please verify expression syntax and balanced parentheses.")
+        finally:
+            self._is_updating_infix_telemetry = False
+
     def open_learning_mode(self) -> None:
         """Opens the DSA Academy, concept guides, and Viva Practice Quiz dialog."""
         LearningModeDialog(
@@ -2168,26 +3329,33 @@ class BlockyDSAWorldApp(tk.Tk):
             "BLOCKY DSA WORLD — QUICK REFERENCE GUIDE\n\n"
             "MODULES:\n"
             "• Stack & Queue Lab: LIFO tower and FIFO singly linked-list conveyor.\n"
-            "• BST Explorer: 3D Binary Search Tree with automated layout & animations.\n\n"
+            "• BST Explorer: 3D Binary Search Tree with automated layout & animations.\n"
+            "• Infix to Postfix Kingdom: 3D interactive expression converter using custom LIFO stack, precedence/associativity rules, step animation, and Challenge Mode.\n\n"
+            "INFIX TO POSTFIX KINGDOM:\n"
+            "• Enter custom expressions or click university benchmark samples.\n"
+            "• Step controls: Play, Pause, Next, Prev, Skip to Result, Reset.\n"
+            "• Speed Slider: Adjust animation duration from 0ms (Instant) to 900ms.\n"
+            "• Copy Result: Copies computed postfix expression to clipboard.\n"
+            "• Challenge Mode: Predict postfix results for randomly generated expressions with accuracy tracking.\n"
+            "• 3D Portals: Interactive in-world Return Portal (to DSA World) and Reset Portal.\n\n"
             "BST OPERATIONS:\n"
             "• Insert: Places node according to BST rule (smaller left, greater right).\n"
             "• Search: Traverses comparison path to locate key [Avg O(log n)].\n"
             "• Delete: Handles leaf, 1-child, and 2-child cases (inorder successor).\n"
-            "• Traversals: Inorder (sorted), Preorder (structure), Postorder (bottom-up).\n"
-            "• Animation Player: Play, Pause, Resume, Restart, and Speed controls.\n\n"
+            "• Traversals: Inorder (sorted), Preorder (structure), Postorder (bottom-up).\n\n"
             "COMPLEXITIES:\n"
             "• Stack Push/Pop/Peek: O(1)\n"
             "• Queue Enqueue/Dequeue/Front/Rear: O(1)\n"
+            "• Infix to Postfix Conversion: Time O(n), Auxiliary Space O(n)\n"
             "• BST Search/Insert: Average O(log n), Worst O(n) (unbalanced/skewed tree)\n"
             "• BST Traversals: O(n)\n\n"
-            "SAMPLE TREE TESTING:\n"
-            "• Values: 50, 30, 70, 20, 40, 60, 80\n"
-            "• Click 'Load Sample Tree' to stage instantly!"
+            "BENCHMARK TESTING EXPRESSIONS:\n"
+            "• A+B*C  |  (A+B)*C  |  A+B*(C-D)  |  A^B^C  |  (A+B)*(C-D)  |  A+B*C-D/E"
         )
         messagebox.showinfo("How to Use Blocky DSA World", help_text, parent=self)
 
     def destroy(self) -> None:
-        """Clean up canvas and traversal timers before application exit."""
+        """Clean up canvas, traversal, and infix timers before application exit."""
         if hasattr(self, "traversal_timer_id") and self.traversal_timer_id:
             try:
                 self.after_cancel(self.traversal_timer_id)
@@ -2195,12 +3363,20 @@ class BlockyDSAWorldApp(tk.Tk):
                 pass
             self.traversal_timer_id = None
 
+        if hasattr(self, "infix_timer_id") and self.infix_timer_id:
+            try:
+                self.after_cancel(self.infix_timer_id)
+            except Exception:
+                pass
+            self.infix_timer_id = None
+
         try:
             if hasattr(self, "visualizer") and self.visualizer:
                 self.visualizer.destroy()
         except Exception:
             pass
         super().destroy()
+
 
 
 def main():

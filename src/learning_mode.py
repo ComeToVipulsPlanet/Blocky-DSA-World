@@ -133,6 +133,14 @@ class LearningModeDialog(tk.Toplevel):
                 ("Deletion Cases", "BST deletion has 3 cases:\n\u2022 Case 1 (Leaf): Simply remove the node.\n\u2022 Case 2 (1 Child): Bypass node, link parent directly to child.\n\u2022 Case 3 (2 Children): Replace value with inorder successor (smallest in right subtree), then delete successor."),
                 ("Time Complexity", "\u2022 Search:  Avg O(log n)  |  Worst O(n)\n\u2022 Insert:  Avg O(log n)  |  Worst O(n)\n\u2022 Delete:  Avg O(log n)  |  Worst O(n)\n\u2022 Inorder/Preorder/Postorder:  O(n)\n\nWorst case O(n) occurs when the tree becomes a skewed linear chain (e.g. inserting 10, 20, 30, 40 in sorted order with no balancing)."),
                 ("Balanced vs Skewed", "A height-balanced BST (e.g. AVL Tree or Red-Black Tree) guarantees O(log n) operations by enforcing that the height difference between left and right subtrees is at most 1 at every node. A skewed (degenerate) BST degrades to O(n) — equivalent to a linked list!"),
+            ]),
+            ("👑 5. INFIX TO POSTFIX CONVERSION (SHUNTING-YARD ALGORITHM)", "#D97706", [
+                ("Infix vs Postfix", "Infix notation places operators between operands (e.g. A + B). Postfix notation (Reverse Polish Notation / RPN) places operators immediately after their operands (e.g. A B +). It is unambiguous and directly evaluable by computers using a single stack pass!"),
+                ("Why Stack is Required", "Operands preserve their exact relative order and are output immediately. Operators cannot be executed until their operands arrive and higher-precedence operations are resolved. The LIFO Stack holds pending operators and pops them in exact order of precedence!"),
+                ("Precedence & Associativity", "• Level 3 (Highest): Exponentiation (^) — RIGHT-associative ('R'). When another '^' arrives, do NOT pop!\n• Level 2: Multiplication (*), Division (/), Modulus (%) — LEFT-associative ('L').\n• Level 1 (Lowest): Addition (+), Subtraction (-) — LEFT-associative ('L')."),
+                ("Why Parentheses Disappear", "In infix expressions, parentheses override operator precedence (e.g. (A+B)*C). In postfix notation, the order of evaluation is completely determined by the relative position of operands and operators. Parentheses are redundant in postfix and are discarded upon popping!"),
+                ("Sample Trace Table [A+B*(C-D)]", "1. Token 'A': Output 'A' | Stack: [] | Output: A\n2. Token '+': Push '+' | Stack: [+] | Output: A\n3. Token 'B': Output 'B' | Stack: [+] | Output: A B\n4. Token '*': Push '*' (higher prec than '+') | Stack: [+, *] | Output: A B\n5. Token '(': Push '(' | Stack: [+, *, (] | Output: A B\n6. Token 'C': Output 'C' | Stack: [+, *, (] | Output: A B C\n7. Token '-': Push '-' | Stack: [+, *, (, -] | Output: A B C\n8. Token 'D': Output 'D' | Stack: [+, *, (, -] | Output: A B C D\n9. Token ')': Pop '-' to output, discard '(' | Stack: [+, *] | Output: A B C D -\n10. End of Input: Pop '*', Pop '+' | Stack: [] | Final Output: A B C D - * +"),
+                ("Time & Space Complexity", "• Time Complexity: O(n) — Linear time. Each token is scanned once, pushed to the stack at most once, and popped at most once.\n• Auxiliary Space Complexity: O(n) — The stack and output list each store at most n tokens."),
             ])
         ]
 
@@ -267,7 +275,7 @@ class LearningModeDialog(tk.Toplevel):
 
         btn_demo4 = tk.Button(
             demo4_card,
-            text="\U0001f333 Load BST Demo",
+            text="🌳 Load BST Demo",
             font=("Segoe UI", 9, "bold"),
             bg="#7C3AED",
             fg="#FFFFFF",
@@ -278,6 +286,34 @@ class LearningModeDialog(tk.Toplevel):
             command=lambda: self._on_load_scenario("BST")
         )
         btn_demo4.pack(side=tk.RIGHT, padx=10)
+
+        # Demo 5: Infix to Postfix Kingdom
+        demo5_card = tk.LabelFrame(container, text="  Scenario E: Infix to Postfix Kingdom — Shunting-Yard Simulation  ", font=("Segoe UI", 10, "bold"), fg="#D97706", bg="#FDFEFE", padx=12, pady=10)
+        demo5_card.pack(fill=tk.X, pady=8)
+
+        tk.Label(
+            demo5_card,
+            text="Loads the benchmark expression 'A+B*(C-D)' into the 3D Infix Kingdom.\n"
+                 "Observe operator precedence, parentheses handling, and animated stack operations!",
+            font=("Segoe UI", 9),
+            fg="#34495E",
+            bg="#FDFEFE",
+            justify="left"
+        ).pack(side=tk.LEFT, padx=10)
+
+        btn_demo5 = tk.Button(
+            demo5_card,
+            text="👑 Load Infix Demo",
+            font=("Segoe UI", 9, "bold"),
+            bg="#D97706",
+            fg="#FFFFFF",
+            activebackground="#B45309",
+            cursor="hand2",
+            padx=12,
+            pady=6,
+            command=lambda: self._on_load_scenario("INFIX")
+        )
+        btn_demo5.pack(side=tk.RIGHT, padx=10)
 
         # Reset button
         reset_frame = tk.Frame(container, bg="#FFFFFF")
@@ -407,6 +443,30 @@ class LearningModeDialog(tk.Toplevel):
                 ],
                 "correct": 2,
                 "explanation": "Inserting values in strictly ascending or descending sorted order creates a skewed (degenerate) BST — each new node becomes the right (or left) child of the previous one, creating a linear chain of height O(n). This degrades BST search, insert, and delete from average O(log n) to worst-case O(n)."
+            },
+            {
+                "id": 8,
+                "question": "8. Why do parentheses never appear in the final postfix expression?",
+                "options": [
+                    "A) Parentheses are illegal characters in programming languages",
+                    "B) The relative position of operands and operators unambiguously determines evaluation order",
+                    "C) Parentheses are stored in a secondary hidden queue",
+                    "D) Parentheses are converted into zero values"
+                ],
+                "correct": 1,
+                "explanation": "In postfix notation (Reverse Polish Notation), the order of operations is uniquely determined by token positions. Parentheses are strictly redundant and are discarded as sub-expressions complete."
+            },
+            {
+                "id": 9,
+                "question": "9. What is the postfix equivalent of A^B^C, given that exponentiation (^) is right-associative?",
+                "options": [
+                    "A) A B ^ C ^",
+                    "B) A B C ^ ^",
+                    "C) ^ ^ A B C",
+                    "D) A B C ^ +"
+                ],
+                "correct": 1,
+                "explanation": "Because exponentiation (^) is right-associative, A^B^C evaluates as A^(B^C). The second '^' does not pop the first '^' off the stack. Operands A, B, C are output, followed by both '^' operators in reverse order, yielding 'A B C ^ ^'."
             }
         ]
 
@@ -529,3 +589,146 @@ class LearningModeDialog(tk.Toplevel):
             color = "#E67E22"
 
         self.score_lbl.configure(text=msg, fg=color)
+
+
+class InfixLearningDialog(tk.Toplevel):
+    """
+    Dedicated learning dialog for Infix to Postfix Kingdom:
+    Covers infix vs postfix notation, stack rationale, operator precedence,
+    associativity rules, removal of parentheses, sample trace tables, and complexities.
+    """
+
+    def __init__(self, parent: tk.Tk):
+        super().__init__(parent)
+        self.title("👑 Infix to Postfix Masterclass — Blocky DSA World")
+        self.geometry("880x680")
+        self.minsize(780, 580)
+        self.configure(bg="#0F172A")
+
+        self.transient(parent)
+        self.grab_set()
+
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        # Header
+        header = tk.Frame(self, bg="#1E293B", height=76)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+
+        tk.Label(
+            header,
+            text="👑 INFIX TO POSTFIX CONVERSION MASTERCLASS",
+            font=("Segoe UI", 14, "bold"),
+            fg="#FACC15",
+            bg="#1E293B"
+        ).pack(anchor="w", padx=20, pady=(12, 2))
+
+        tk.Label(
+            header,
+            text="Dijkstra's Shunting-Yard Algorithm • LIFO Stack Dynamics • Operator Precedence & Associativity",
+            font=("Segoe UI", 9),
+            fg="#94A3B8",
+            bg="#1E293B"
+        ).pack(anchor="w", padx=20)
+
+        # Scrollable container
+        canvas = tk.Canvas(self, bg="#0F172A", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        body = tk.Frame(canvas, bg="#0F172A", padx=20, pady=15)
+
+        body.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=body, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def _on_wheel(e):
+            canvas.yview_scroll(int(-1 * (e.delta / 120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_wheel)
+
+        cards = [
+            ("1. Infix vs Postfix (Reverse Polish) Notation", "#38BDF8",
+             "• Infix Notation: Operators sit BETWEEN operands (e.g., A + B * C). Natural for humans, but computers require parentheses and precedence rules to parse order.\n"
+             "• Postfix Notation (RPN): Operators sit AFTER their operands (e.g., A B C * +). Order of execution is strictly linear and unambiguous! A single stack pass can evaluate the entire expression without backtracking."),
+
+            ("2. Why a Stack is Required", "#FACC15",
+             "Operands preserve their exact relative order and are sent directly to the output. However, operators cannot be evaluated until their operands arrive and higher-precedence operations finish.\n"
+             "The LIFO (Last In, First Out) Stack acts as a temporary holding area that reverses the order of operators according to their mathematical precedence."),
+
+            ("3. Operator Precedence & Associativity Rules", "#4ADE80",
+             "• Parentheses '(': Create a localized scope. Operators inside have higher local precedence. Discarded when matching ')' is met.\n"
+             "• Exponentiation (^): Precedence 3 (Highest). RIGHT-ASSOCIATIVE ('R'). Consecutive '^' operators (A^B^C) do NOT pop! They stack to evaluate right-to-left: A^(B^C) -> A B C ^ ^.\n"
+             "• Multiplication (*), Division (/), Modulus (%): Precedence 2. LEFT-ASSOCIATIVE ('L'). Equal precedence pops top.\n"
+             "• Addition (+), Subtraction (-): Precedence 1 (Lowest). LEFT-ASSOCIATIVE ('L'). Equal precedence pops top."),
+
+            ("4. Why Parentheses Disappear in Postfix Output", "#F472B6",
+             "In infix expressions, parentheses are mandatory to force addition before multiplication: (A + B) * C.\n"
+             "In postfix notation, writing 'A B + C *' already guarantees that '+' executes before '*' because '+' immediately follows A and B! Parentheses are completely unnecessary and are discarded when popping."),
+
+            ("5. Complete Step-by-Step Trace Table for (A+B)*(C-D)", "#FB923C",
+             "Token | Action               | Stack Contents (Bottom -> Top) | Postfix Output\n"
+             "--------------------------------------------------------------------------------\n"
+             "(     | Push '(' to Stack    | ['(']                          | []\n"
+             "A     | Output operand 'A'   | ['(']                          | ['A']\n"
+             "+     | Push '+' to Stack    | ['(', '+']                     | ['A']\n"
+             "B     | Output operand 'B'   | ['(', '+']                     | ['A', 'B']\n"
+             ")     | Pop '+' to output,   | []                             | ['A', 'B', '+']\n"
+             "      | discard '('          |                                |\n"
+             "*     | Push '*' to Stack    | ['*']                          | ['A', 'B', '+']\n"
+             "(     | Push '(' to Stack    | ['*', '(']                     | ['A', 'B', '+']\n"
+             "C     | Output operand 'C'   | ['*', '(']                     | ['A', 'B', '+', 'C']\n"
+             "-     | Push '-' to Stack    | ['*', '(', '-']                | ['A', 'B', '+', 'C']\n"
+             "D     | Output operand 'D'   | ['*', '(', '-']                | ['A', 'B', '+', 'C', 'D']\n"
+             ")     | Pop '-' to output,   | ['*']                          | ['A', 'B', '+', 'C', 'D', '-']\n"
+             "      | discard '('          |                                |\n"
+             "END   | Drain remaining '*'  | []                             | ['A', 'B', '+', 'C', 'D', '-', '*']\n"
+             "Result: A B + C D - *"),
+
+            ("6. Complexity Information", "#A78BFA",
+             "• Time Complexity: O(n)\n"
+             "  n is the number of tokens in the expression. Tokenization scans each character in O(n) time. During conversion, each token is pushed onto the stack at most once and popped at most once. Hence, total runtime is strictly linear O(n).\n\n"
+             "• Auxiliary Space Complexity: O(n)\n"
+             "  The operator stack holds at most n tokens in the worst case (e.g. deeply nested parentheses or ascending precedence). The output buffer holds all n tokens.")
+        ]
+
+        for title, col, text in cards:
+            box = tk.LabelFrame(
+                body,
+                text=f"  {title}  ",
+                font=("Segoe UI", 10, "bold"),
+                fg=col,
+                bg="#1E293B",
+                bd=1,
+                relief="ridge",
+                padx=14,
+                pady=10
+            )
+            box.pack(fill=tk.X, pady=8)
+
+            lbl = tk.Label(
+                box,
+                text=text,
+                font=("Consolas" if "Trace Table" in title else "Segoe UI", 9),
+                fg="#F8FAFC",
+                bg="#1E293B",
+                justify="left",
+                wraplength=780,
+                anchor="w"
+            )
+            lbl.pack(fill=tk.X, expand=True)
+
+        btn_close = tk.Button(
+            body,
+            text="Close Masterclass",
+            font=("Segoe UI", 10, "bold"),
+            bg="#334155",
+            fg="#F8FAFC",
+            activebackground="#475569",
+            cursor="hand2",
+            padx=20,
+            pady=8,
+            command=self.destroy
+        )
+        btn_close.pack(pady=15)

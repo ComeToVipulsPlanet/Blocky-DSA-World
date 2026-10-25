@@ -1,7 +1,11 @@
-# 🧱 BLOCKY DSA WORLD — 3D-Style Stack, Queue & Binary Search Tree (BST) Visualizer
+# 🧱 BLOCKY DSA WORLD — 3D Stack, Queue, BST & Infix to Postfix Kingdom
 
-> **Visualize • Learn • Master Data Structures**  
-> An attractive, colorful, Roblox-inspired blocky desktop application that teaches Stack, Queue, and Binary Search Tree (BST) data structures through interactive 3D operations, path comparison animations, tree traversals, live telemetry metrics, and a built-in Viva Academy.
+> **Visualize • Learn • Master Data Structures & Algorithms**  
+> An attractive, colorful, Roblox-inspired blocky 3D desktop application built in pure Python that teaches:
+> - **Stack (LIFO)** via a vertical block tower
+> - **Queue (FIFO)** via a Singly Linked List conveyor runway
+> - **Binary Search Tree (BST Explorer)** with 3D nodes, animated search/insert/delete, and traversals
+> - **Infix to Postfix Kingdom**: an interactive 3D conversion arena demonstrating Dijkstra's Shunting-Yard algorithm with a custom LIFO Stack, step-by-step 3D animations, Challenge Mode, and Infix Masterclass.
 
 ---
 
@@ -10,99 +14,127 @@
 2. [Problem Statement](#-problem-statement)
 3. [Objectives](#-objectives)
 4. [Key Features](#-key-features)
+   - [👑 Infix to Postfix Kingdom](#-infix-to-postfix-kingdom)
+   - [📦 Stack & Queue Lab](#-stack--queue-lab)
+   - [🌳 BST Explorer](#-bst-explorer)
 5. [Technologies Used](#-technologies-used)
 6. [Core DSA Concepts Implemented](#-core-dsa-concepts-implemented)
-7. [Time Complexity Reference Table](#-time-complexity-reference-table)
-8. [Project Folder Structure](#-project-folder-structure)
-9. [Installation & Setup (Windows)](#-installation--setup-windows)
-10. [How to Run the Application](#-how-to-run-the-application)
-11. [How to Run the Unit Tests](#-how-to-run-the-unit-tests)
-12. [Step-by-Step Operation Examples](#-step-by-step-operation-examples)
-13. [Screenshots & Visuals](#-screenshots--visuals)
-14. [Limitations & Future Enhancements](#-limitations--future-enhancements)
-15. [GitHub Upload Instructions](#-github-upload-instructions)
+7. [Operator Precedence & Associativity Specification](#-operator-precedence--associativity-specification)
+8. [University Benchmark Expressions](#-university-benchmark-expressions)
+9. [Time & Space Complexity Reference Table](#-time--space-complexity-reference-table)
+10. [Project Folder Structure](#-project-folder-structure)
+11. [Installation & Setup (Windows)](#-installation--setup-windows)
+12. [How to Run the Application](#-how-to-run-the-application)
+13. [How to Run the Unit Tests (81 Tests)](#-how-to-run-the-unit-tests-81-tests)
+14. [Step-by-Step Operation Examples](#-step-by-step-operation-examples)
+15. [Limitations & Future Enhancements](#-limitations--future-enhancements)
 16. [Author & License](#-author--license)
 
 ---
 
 ## 🌟 Project Overview
 
-**BLOCKY DSA WORLD** is an interactive desktop visualization tool created in pure Python using `tkinter`. It transforms abstract Data Structures and Algorithms (DSA) into intuitive, tangible 3D toy blocks inspired by the playful, voxel aesthetic of block-building games like Roblox.
+**BLOCKY DSA WORLD** is an interactive desktop visualization environment created in pure Python using `tkinter`. It transforms abstract Data Structures and Algorithms (DSA) into intuitive, tangible 3D toy blocks inspired by the playful, voxel aesthetic of block-building games like Roblox.
 
-Instead of staring at terminal text or dry whiteboard diagrams, students can explore:
-- A vertical **Stack Tower (LIFO)** where blocks drop and pop from the top.
-- A horizontal **Queue Conveyor Belt (FIFO)** where blocks slide from rear to front.
-- A dedicated **3D Binary Search Tree (BST) World** where tree nodes stand as 3D blocks with toy studs connected by 3D cylindrical beams, complete with path-comparison animations for insertion/search/deletion, animated Inorder, Preorder, and Postorder traversals, and dynamic camera pan/zoom controls.
+Instead of staring at terminal text or dry whiteboard diagrams, students can explore three interconnected educational locations:
+1. **📦 Stack & Queue Lab**: A vertical **Stack Tower (LIFO)** where blocks drop and pop from the top, and a horizontal **Queue Conveyor Runway (FIFO)** where blocks slide from rear to front.
+2. **🌳 BST Explorer**: A dedicated 3D Binary Search Tree world where nodes stand as 3D blocks with toy studs connected by 3D cylindrical beams, complete with path-comparison animations for insertion/search/deletion, animated Inorder, Preorder, and Postorder traversals, and dynamic camera pan/zoom controls.
+3. **👑 Infix to Postfix Kingdom**: A vibrant 3D floating island dedicated to expression parsing and Reverse Polish Notation (RPN) conversion. Watch tokens glide along the processing lane, operators push onto and pop off the vertical stack tower based on precedence and right-associativity, and operands march directly into the postfix output runway.
 
-Every operation—Push, Pop, Peek, Enqueue, Dequeue, Front, Rear, BST Insert, Search, Delete, and Traversals—is animated in real time, directly reflecting the state of pure Python algorithms without external dependencies.
+Every operation is computed live in Python with custom data structures and animated in real-time with zero external third-party packages or web dependencies.
 
 ---
 
 ## 🎯 Problem Statement
 
-Beginners in computer science often struggle to understand:
-- The fundamental difference between **LIFO (Last In, First Out)** and **FIFO (First In, First Out)**.
-- Why removing an element from the front of a standard Python list (`list.pop(0)`) is computationally slow ($O(N)$), while a **Singly Linked List** allows $O(1)$ constant time removal.
-- How internal pointers (`front`, `rear`, `next`, `left`, `right`) actually shift and update during data insertion and deletion.
-- How a **Binary Search Tree** compares keys at each node, branching left or right, and how tree traversals (Inorder, Preorder, Postorder) systematically visit every node.
-- How to answer critical technical questions during college viva and lab examinations.
+Students and programmers frequently encounter difficulty mastering:
+- **Expression Parsing & Evaluation**: Why human-readable infix expressions ($A + B \times C$) cannot be evaluated directly by compilers from left to right without operator precedence ambiguities.
+- **The Shunting-Yard Algorithm**: How a simple LIFO stack manages operator precedence, left/right associativity, and nested parentheses in linear $O(n)$ time.
+- **Associativity Invariants**: Why exponentiation ($A \wedge B \wedge C$) is right-associative ($A \wedge (B \wedge C)$) and must **not** pop an existing `^` operator off the stack, while $+$, $-$, $\times$, $/$, $\%$ are left-associative.
+- **Why Parentheses Disappear**: How parentheses enforce subexpression evaluation order during conversion and are systematically discarded from the final postfix output.
+- **LIFO vs FIFO**: The physical mechanics of Last-In First-Out vs First-In First-Out.
+- **Tree Traversals**: How recursive comparison paths operate in a Binary Search Tree.
 
-Standard visualizers are often either complex web apps with heavy npm dependencies, or static mockups that do not run locally on simple student PCs. **Blocky DSA World** solves this by providing a self-contained, offline-first Python desktop application with 100% standard library compliance.
+**Blocky DSA World** solves this by providing a self-contained, offline-first Python desktop application with 100% standard library compliance.
 
 ---
 
 ## 🚀 Objectives
 
-1. **Interactive Pedagogy**: Provide an intuitive visual mental model for Stack, Queue, and BST operations.
-2. **Algorithmic Rigor**: Implement genuine, manual data structures (List-backed Stack, Singly Linked List Queue, and Node-based Binary Search Tree) with strict pointer invariants.
-3. **Smooth Canvas Animations**: Deliver delightful frame-by-frame 3D block movements using `tkinter.Canvas.after()` without freezing the GUI thread.
+1. **Interactive Pedagogy**: Provide an intuitive visual mental model for Stack, Queue, BST, and Expression Conversion.
+2. **Algorithmic Rigor**: Implement genuine, manual data structures (custom `ConversionStack`, Singly Linked List `Queue`, and Node-based `BinarySearchTree`) with strict pointer invariants.
+3. **Smooth Canvas Animations**: Deliver delightful frame-by-frame 3D block movements (parabolic arc block flights, token scanning cursors, glowing pointers) using `tkinter.Canvas.after()` without freezing the GUI thread.
 4. **Resilience & Safe State**: Include input validation, duplicate rejection, overflow/underflow warnings, and a snapshot-based **Undo** feature.
-5. **Viva Exam Readiness**: Integrate an in-app "DSA Academy" complete with concept summaries, demo scenarios, and an interactive 7-question viva quiz.
+5. **Exam Readiness**: Integrate an in-app "Infix Masterclass", "DSA Academy", preset scenarios, and a randomized **Challenge Mode** with score tracking.
 
 ---
 
 ## ✨ Key Features
 
-- **Roblox-Inspired 3D Voxel Aesthetic**:
-  - Sky blue environment with procedural drifting voxel clouds and a glowing voxel sun.
-  - Voxel terrain with checkerboard grass layers and decorative pine trees.
-  - Friendly mascot avatar (**"Coder Alex" / "Blocky Bob"**) with animated idle breathing and an interactive speech bubble explaining every action.
-  - Multi-face shaded 3D blocks with top studs (cylindrical buttons) for an authentic blocky toy aesthetic.
-- **Dedicated Stack Tower (LIFO)**:
+### 👑 Infix to Postfix Kingdom
+- **Blocky 3D Conversion Arena**:
+  - Floating 3D island terrain with grass top, gold stud trim, and glowing purple, cyan, yellow, and pink crystal ore deposits in the cliff face.
+  - Spanning grand entrance banner reading `👑 INFIX TO POSTFIX KINGDOM 👑` framed by twin 3D pillars with flame lanterns.
+  - **Interactive 3D Portals**:
+    - `🚪 RETURN [DSA World]`: Clickable 3D portal with deep indigo frame and glowing purple vortex that seamlessly transports the player back to the Stack & Queue Lab.
+    - `🌀 RESET [Clear All]`: Clickable 3D portal with cyan vortex that resets the expression converter and arena.
+  - **Infix Token Processing Lane**: Raised 3D conveyor track displaying the discrete tokens of the current expression, complete with a neon blue animated scanner cursor.
+  - **Operator Stack Tower (LIFO)**: Vertical platform with side rails and a golden `👑 TOP` crown displaying stack items from bottom to top.
+  - **Postfix Output Runway**: Horizontal platform with directional neon chevrons displaying output blocks in exact evaluation order.
+  - **3D Tech Explanation Board**: Floating terminal console showing current step number, active token, action taken, and theoretical reasoning.
+  - **Coder Mascot Avatar ("Blocky Bob")**: Interactive 3D mascot with live speech bubble commenting on every step.
+- **Full Expression Parsing & Tokenization**:
+  - Supports single-letter variables (`A`, `B`), multi-letter variables (`total`, `price`, `count`), multi-digit integers (`123`, `456`), decimal numbers (`3.14`, `0.5`), and whitespace-tolerant input.
+  - Supported operators: `+`, `-`, `*`, `/`, `%`, `^`, and arbitrarily nested parentheses `( )`.
+  - Comprehensive syntax validation: detects empty input, consecutive operators, missing operands, unbalanced parentheses, empty parentheses, and explicitly flags unary operators.
+- **Benchmark Presets**: One-click quick load buttons for 6 canonical university test expressions:
+  - `A+B*C` $\to$ `A B C * +`
+  - `(A+B)*C` $\to$ `A B + C *`
+  - `A+B*(C-D)` $\to$ `A B C D - * +`
+  - `A^B^C` $\to$ `A B C ^ ^`
+  - `(A+B)*(C-D)` $\to$ `A B + C D - *`
+  - `A+B*C-D/E` $\to$ `A B C * + D E / -`
+- **Playback & Navigation Controls**:
+  - `▶ Play` / `⏸ Pause`: Automated continuous step playback.
+  - `⏮ Prev` / `⏭ Next`: Step-by-step pedagogical progression.
+  - `⏭ Skip to Result`: Instantly jumps to final converted postfix expression.
+  - `🔄 Reset Arena`: Restores arena to step 0.
+  - **Speed Slider**: Continuously adjustable animation delay from 0ms (Instant) to 900ms.
+- **Postfix Output Deck**:
+  - `📋 Copy Result`: Copies postfix string directly to the OS clipboard with GUI feedback.
+  - `🔁 Replay`: Re-triggers full animated playback from step 0.
+- **Challenge Mode (Practice Viva / Exam)**:
+  - Generates randomized valid infix expressions with varied precedence and parentheses across Easy, Medium, and Hard difficulties.
+  - Prompts the user to predict the postfix result.
+  - Validates answer order (ignoring harmless whitespace), provides instant feedback, updates session score/accuracy (`X / Y (Z%)`), and offers a `👁 Watch Solution` button to step through in 3D.
+- **Interactive Trace Table**: Scrollable Treeview listing every step `#`, `Token`, and `Action Summary`. Clicking any row instantly jumps the 3D arena to that exact state.
+
+---
+
+### 📦 Stack & Queue Lab
+- **Stack Tower (LIFO)**:
   - Vertical slot guides with index indicators `[0]` to `[6]`.
   - Floating golden crown pointer: `👑 TOP [LIFO]`.
   - Animated 3D drop on **Push** and skyward lift-off on **Pop**.
   - Non-destructive **Peek** with golden aura highlight.
-- **Dedicated Queue Conveyor Belt (FIFO)**:
+- **Queue Conveyor Belt (FIFO)**:
   - Voxel runway with directional neon chevrons `⏩ ⏩ ⏩`.
-  - Clear intake chute on the right (`📥 REAR`) and exit chute on the left (`🚀 FRONT`).
+  - Intake chute on right (`📥 REAR`) and exit chute on left (`🚀 FRONT`).
   - Animated slide onto the belt on **Enqueue** and exit roll-off on **Dequeue**.
-  - Separate pointers: Cyan `⬅ FRONT` (Head) and Magenta `REAR ➡` (Tail).
-- **Dedicated Binary Search Tree (BST) Explorer**:
-  - Manual, pointer-based `Node(value, left, right)` and `BinarySearchTree` classes without third-party packages.
-  - Non-overlapping 3D isometric layout rendering with 3D connecting beams, directional branch labels (`L` / `R`), and golden `👑 ROOT` badge.
-  - **Animated Insert**: Drops new block from sky, highlights comparison path (Green = Less/Left, Magenta = Greater/Right), and anchors at correct leaf slot.
-  - **Duplicate Rejection**: Gracefully detects and flashes warning when attempting to insert existing keys.
-  - **Animated Search**: Highlights traversal path from root downward to target node.
-  - **Animated Delete**: Supports all 3 BST deletion cases (leaf node, node with 1 child, and node with 2 children using inorder successor replacement).
-  - **Animated Traversals**: Inorder (Left → Root → Right, guaranteed sorted order), Preorder (Root → Left → Right), and Postorder (Left → Right → Root) with step-by-step node highlights and live output list updates.
-  - **Animation Player Deck**: Play, Pause, Resume, Restart, and Speed buttons (0.5x, 1x, 2x).
-  - **Interactive 3D Camera**: Drag left mouse button to pan, use mouse wheel (or buttons) to zoom in/out, and reset camera view.
-  - **Sample Tree Loader**: Instant one-click population of canonical sample tree `[50, 30, 70, 20, 40, 60, 80]`.
-- **Safe Undo System**:
-  - Automatically captures state snapshots before every mutating operation across Stack, Queue, and BST.
-  - Reverts state safely without data corruption or memory leaks.
-- **Control Deck & Input Validation**:
-  - Text/numeric input field with `[Enter]` shortcut.
-  - `🎲 Rand` generator and quick preset chips (`50`, `30`, `70`, `20`, `40`, `60`, `80`).
-- **Telemetry & Stats Panel**:
-  - Real-time size, height, min, max, and balance status indicators.
-  - Scrollable chronological operation history with timestamped logs.
-  - Human-readable narrative explaining the last operation in plain English.
-- **In-App DSA Academy & Viva Quiz**:
-  - Core DSA concept breakdowns (Stack, Queue, Singly Linked List, and BST).
-  - Pre-staged scenarios (Load LIFO Demo, Load FIFO Demo, Dual Lab Demo, BST Explorer Demo).
-  - 7-question multiple-choice practice quiz with instant grading and detailed explanations.
+  - Dual pointers: Cyan `⬅ FRONT` (Head) and Magenta `REAR ➡` (Tail).
+
+---
+
+### 🌳 BST Explorer
+- Manual, pointer-based `Node(value, left, right)` and `BinarySearchTree` classes without third-party packages.
+- Non-overlapping 3D isometric layout rendering with 3D connecting beams, directional branch labels (`L` / `R`), and golden `👑 ROOT` badge.
+- **Animated Operations**:
+  - **Insert**: Drops block from sky, highlights comparison path (Green = Less/Left, Magenta = Greater/Right), and anchors at leaf.
+  - **Duplicate Rejection**: Gracefully detects and flags existing keys.
+  - **Search**: Highlights traversal path from root downward.
+  - **Delete**: Handles leaf, 1-child, and 2-child cases (inorder successor replacement).
+- **Traversals**: Inorder (sorted), Preorder (structure), and Postorder (bottom-up) with step highlights and live output list updates.
+- **Interactive 3D Camera**: Drag left mouse button to pan, use mouse wheel to zoom in/out, and reset camera view.
 
 ---
 
@@ -110,68 +142,74 @@ Standard visualizers are often either complex web apps with heavy npm dependenci
 
 - **Language**: Python 3.8+ (tested on Python 3.14 on Windows)
 - **GUI Toolkit**: `tkinter` & `ttk` (Standard Python Library)
-- **Graphics & Animation Engine**: `tkinter.Canvas` with isometric projection math, 3D shading, and non-blocking `after()` event scheduling.
+- **Graphics & Animation Engine**: `tkinter.Canvas` with isometric 3D projection, depth shading, top studs, and non-blocking `after()` event loops.
 - **Testing Framework**: `unittest` (Standard Python Library)
-- **Dependencies**: **Zero** external libraries required! (No Pygame, OpenGL, Node.js, or pip packages needed).
+- **Dependencies**: **Zero** external libraries required! (No Pygame, Ursina, OpenGL, Node.js, or pip packages needed).
 
 ---
 
 ## 🧠 Core DSA Concepts Implemented
 
-### 1. Stack — LIFO (Last In, First Out)
-- **Mechanism**: Elements are inserted and removed from the same end, known as the **TOP**.
-- **Analogy**: A stack of Minecraft/Roblox blocks or cafeteria trays.
-- **Implementation**: Encapsulated in `src/stack.py` using an internal Python list `self._items`.
-  - `push(item)`: Appends element to the end of the list ($O(1)$ amortized).
-  - `pop()`: Removes and returns the last element ($O(1)$).
-  - `peek()`: Returns `self._items[-1]` without removing ($O(1)$).
-  - `is_empty()`, `is_full()`, `size()`, `clear()`.
-
-### 2. Queue — FIFO (First In, First Out) via Singly Linked List
-- **Mechanism**: Elements are inserted at the **REAR** (tail) and removed from the **FRONT** (head).
-- **Analogy**: A line of students waiting at the school cafeteria lunch counter.
-- **Why a Singly Linked List?**  
-  In a standard Python list, `list.pop(0)` takes $O(N)$ time because all remaining elements must shift left in memory. By implementing a manual **Singly Linked List** with `Node(value, next)`:
-  - `enqueue(item)`: Attaches a new node to `self.rear.next` and updates `rear` in **$O(1)$ constant time**.
-  - `dequeue()`: Moves `self.front` to `self.front.next` in **$O(1)$ constant time** with zero memory shifting.
-  - **Pointer Invariant**: When the final node is dequeued, `self.rear` is explicitly reset to `None` so it does not point to an orphaned node.
-
-### 3. Binary Search Tree (BST) — Hierarchical Search Structure
-- **Mechanism**: Non-linear tree structure where each node has at most two children (`left` and `right`).
-- **BST Invariant**: For every node $N$, all keys in the left subtree are strictly $< N.val$, and all keys in the right subtree are strictly $> N.val$.
-- **Implementation**: Encapsulated in `src/bst.py` with manual `Node` references.
-  - `insert(val)`: Recursively or iteratively navigates down comparing values to insert at the correct leaf position. Rejects duplicate values.
-  - `search(val)`: Halves search space at each level, returning boolean and visited comparison path.
-  - `delete(val)`: Handles all three cases:
-    - **Leaf Node**: Simply detaches node from parent.
-    - **Single Child**: Replaces node with its sole child.
-    - **Two Children**: Locates inorder successor (smallest in right subtree), replaces value, and deletes successor recursively.
-  - **Traversals**:
-    - **Inorder** ($L \to \text{Root} \to R$): Guaranteed strictly ascending order for valid BSTs.
-    - **Preorder** ($\text{Root} \to L \to R$): Used for tree duplication and serialization.
-    - **Postorder** ($L \to R \to \text{Root}$): Used for bottom-up tree deletion and dependency evaluation.
+### 1. Infix to Postfix Conversion (Dijkstra's Shunting-Yard Algorithm)
+- **Infix Notation**: Operators are placed between operands (e.g. $A + B$). Requires parentheses and operator precedence conventions to remove ambiguity.
+- **Postfix Notation (Reverse Polish Notation — RPN)**: Operators appear after their operands (e.g. $A B +$). Evaluated strictly left-to-right by stack machines with **zero** parentheses required.
+- **Algorithm Rules**:
+  1. **Operands**: Added directly to the Postfix output runway.
+  2. **Left Parenthesis `(`**: Pushed onto the Stack to define a subexpression scope.
+  3. **Right Parenthesis `)`**: Pop operators from the Stack to the output runway until the matching `(` is popped. The parentheses are discarded.
+  4. **Operators (`+`, `-`, `*`, `/`, `%`, `^`)**:
+     - While the top of the stack has an operator with **greater precedence**, or **equal precedence with left-associativity**, pop it to the output runway.
+     - Push the incoming operator onto the Stack.
+  5. **End of Expression**: Pop all remaining operators from the Stack to the output runway.
 
 ---
 
-## ⏱ Time Complexity Reference Table
+## 📐 Operator Precedence & Associativity Specification
 
-| Data Structure | Operation | Method | Average Time | Worst-case Time | Space Complexity | Explanation |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| **Stack** | Push | `push(x)` | **$O(1)$** | **$O(1)$** amortized | $O(1)$ | Appends to the top of internal list |
-| **Stack** | Pop | `pop()` | **$O(1)$** | **$O(1)$** | $O(1)$ | Removes top element without shifting |
-| **Stack** | Peek | `peek()` | **$O(1)$** | **$O(1)$** | $O(1)$ | Direct index access to top element |
-| **Stack** | Is Empty | `is_empty()` | **$O(1)$** | **$O(1)$** | $O(1)$ | Checks if size is zero |
-| **Queue** | Enqueue | `enqueue(x)` | **$O(1)$** | **$O(1)$** | $O(1)$ | Direct insertion at `rear` pointer |
-| **Queue** | Dequeue | `dequeue()` | **$O(1)$** | **$O(1)$** | $O(1)$ | Direct removal at `front` pointer |
-| **Queue** | Front | `get_front()` | **$O(1)$** | **$O(1)$** | $O(1)$ | Reads head node value |
-| **Queue** | Rear | `get_rear()` | **$O(1)$** | **$O(1)$** | $O(1)$ | Reads tail node value |
-| **Queue** | Is Empty | `is_empty()` | **$O(1)$** | **$O(1)$** | $O(1)$ | Checks if `front` is `None` |
-| **BST** | Search | `search(k)` | **$O(\log n)$** | **$O(n)$** | $O(h)$ | Skewed tree degrades to linear search |
-| **BST** | Insert | `insert(k)` | **$O(\log n)$** | **$O(n)$** | $O(h)$ | Navigates down tree height $h$ |
-| **BST** | Delete | `delete(k)` | **$O(\log n)$** | **$O(n)$** | $O(h)$ | Replaces with inorder successor if 2 children |
-| **BST** | Inorder | `inorder()` | **$O(n)$** | **$O(n)$** | $O(n)$ | Visits every node in sorted order |
-| **BST** | Preorder | `preorder()` | **$O(n)$** | **$O(n)$** | $O(n)$ | Visits root before subtrees |
-| **BST** | Postorder | `postorder()` | **$O(n)$** | **$O(n)$** | $O(n)$ | Visits subtrees before root |
+| Symbol | Name | Precedence | Associativity | Stack Pop Condition on Top Operator $T$ with Incoming $O$ |
+| :---: | :---: | :---: | :---: | :--- |
+| **`(`** | Left Parenthesis | Scope Boundary | None | Never popped by an incoming operator; acts as boundary until `)` |
+| **`^`** | Exponentiation | **3 (Highest)** | **Right (R)** | Pop $T$ only if $\text{prec}(T) > \text{prec}(O)$. Equal precedence does **not** pop! |
+| **`*`, `/`, `%`** | Multiply, Divide, Mod | **2 (Medium)** | **Left (L)** | Pop $T$ if $\text{prec}(T) \ge \text{prec}(O)$ |
+| **`+`, `-`** | Addition, Subtraction | **1 (Lowest)** | **Left (L)** | Pop $T$ if $\text{prec}(T) \ge \text{prec}(O)$ |
+
+> **Critical Associativity Note**:  
+> Because exponentiation (`^`) is **right-associative**, $A \wedge B \wedge C = A \wedge (B \wedge C)$. When scanning the second `^`, the first `^` on top of the stack has equal precedence (3 == 3), but must **remain on the stack**. The final postfix expression is `A B C ^ ^`.
+
+---
+
+## 🎓 University Benchmark Expressions
+
+The conversion algorithm has been verified against standard university computer science examination test cases:
+
+| # | Infix Expression | Correct Postfix (RPN) | Pedagogical Focus |
+| :---: | :--- | :--- | :--- |
+| 1 | `A+B` | `A B +` | Fundamental binary operator |
+| 2 | `A+B*C` | `A B C * +` | Operator precedence ($* > +$) |
+| 3 | `(A+B)*C` | `A B + C *` | Parentheses overriding precedence |
+| 4 | `A*B+C` | `A B * C +` | Left-to-right evaluation |
+| 5 | `A+B*(C-D)` | `A B C D - * +` | Precedence + nested grouping |
+| 6 | `(A+B)*(C-D)` | `A B + C D - *` | Symmetric dual grouping |
+| 7 | `A^B^C` | `A B C ^ ^` | **Right-associativity** of exponentiation |
+| 8 | `A+B*C-D/E` | `A B C * + D E / -` | Mixed precedence with subtraction & division |
+| 9 | `(A+B)/(C+D)*(E-F)` | `A B + C D + / E F - *` | Complex multi-parenthesis pipeline |
+| 10 | `A+B*(C^D-E)` | `A B C D ^ E - * +` | Exponentiation inside parentheses |
+| 11 | `123+456*2` | `123 456 2 * +` | Multi-digit integer literals |
+| 12 | `total+price*count` | `total price count * +` | Multi-character variable identifiers |
+| 13 | `3.14*r^2` | `3.14 r 2 ^ *` | Decimal float literals & identifiers |
+
+---
+
+## ⏱ Time & Space Complexity Reference Table
+
+| Data Structure / Algorithm | Operation | Average Time | Worst-case Time | Space Complexity | Description |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Infix to Postfix** | Conversion | **$O(n)$** | **$O(n)$** | **$O(n)$** | $n$ tokens. Each token pushed and popped at most once |
+| **Infix to Postfix** | Tokenization | **$O(n)$** | **$O(n)$** | **$O(n)$** | Single-pass linear lexical scanner |
+| **Stack** | Push / Pop / Peek | **$O(1)$** | **$O(1)$** | **$O(1)$** | Constant-time LIFO top operations |
+| **Queue (Linked List)** | Enqueue / Dequeue | **$O(1)$** | **$O(1)$** | **$O(1)$** | Constant-time pointer updates at `front` and `rear` |
+| **BST** | Search / Insert / Delete | **$O(\log n)$** | **$O(n)$** | **$O(h)$** | Tree height $h$; skewed tree degrades to linear |
+| **BST** | Inorder / Pre / Post | **$O(n)$** | **$O(n)$** | **$O(n)$** | Systematically visits every tree node once |
 
 ---
 
@@ -180,29 +218,32 @@ Standard visualizers are often either complex web apps with heavy npm dependenci
 ```text
 blocky-dsa-world/
 │
-├── main.py                     # Main application entry point, dual lab & BST GUI
+├── main.py                     # Main application entry point, module switcher & GUI
 ├── requirements.txt            # Dependency notice (Python standard library only)
 ├── README.md                   # Comprehensive project documentation & viva guide
 ├── .gitignore                  # Python-specific git exclusion rules
 │
-├── src/                        # Modular source code
-│   ├── __init__.py             # Exposes public package symbols (Stack, Queue, BST)
+├── dsa/                        # Pure algorithm & data structure engine
+│   ├── __init__.py             # Exports InfixToPostfixConverter, ConversionStack, etc.
+│   └── infix_to_postfix.py     # Tokenizer, Validator, Shunting-Yard engine, Step Trace & Generator
+│
+├── src/                        # GUI & Visualization components
+│   ├── __init__.py             # Public package symbols
 │   ├── stack.py                # Stack class (LIFO, Python list-backed)
 │   ├── queue_linked_list.py    # Node & Queue classes (FIFO, Singly Linked List)
 │   ├── bst.py                  # Node & BinarySearchTree classes (Search, Insert, Delete, Traversals)
-│   ├── visualizer.py           # 3D Canvas visualizer, voxel scenery, animations, 3D BST World
-│   ├── learning_mode.py        # Educational tabs, scenario presets, viva quiz
-│   └── history.py              # Operation telemetry & safe undo snapshots (Stack, Queue, BST)
+│   ├── visualizer.py           # 3D Canvas visualizer, Infix Kingdom arena, BST World, portals
+│   ├── learning_mode.py        # Educational tabs, Infix Masterclass modal, Viva quiz
+│   ├── history.py              # Operation telemetry & safe undo snapshots
+│   └── infix_to_postfix.py     # Re-export bridge to dsa.infix_to_postfix
 │
-├── tests/                      # Automated test suite (37 tests)
-│   ├── __init__.py             # Test package marker
-│   ├── test_stack.py           # Unit tests for Stack operations & invariants
-│   ├── test_queue.py           # Unit tests for Singly Linked List Queue & pointers
-│   ├── test_bst.py             # Unit tests for BST operations, sample tree, & edge cases
-│   └── test_gui_integration.py # Headless end-to-end GUI integration tests
-│
-└── assets/                     # Media & screenshot documentation
-    └── README.md               # Screenshot placement guidelines
+└── tests/                      # Automated test suite (81 tests)
+    ├── __init__.py             # Test package marker
+    ├── test_infix_to_postfix.py# 38 unit tests for conversion, precedence, associativity, errors
+    ├── test_stack.py           # 8 unit tests for Stack operations & invariants
+    ├── test_queue.py           # 11 unit tests for Singly Linked List Queue & pointers
+    ├── test_bst.py             # 12 unit tests for BST operations, sample tree, edge cases
+    └── test_gui_integration.py # 12 headless end-to-end GUI integration tests
 ```
 
 ---
@@ -211,19 +252,19 @@ blocky-dsa-world/
 
 ### Prerequisites
 - Windows 10 or 11
-- Python 3.8 or newer (comes with `tkinter` pre-installed on Windows)
+- Python 3.8 or newer (with `tkinter` included by default)
 
 ### Steps
 1. Open PowerShell or Command Prompt.
-2. Verify your Python installation:
+2. Verify Python installation:
    ```powershell
    python --version
    ```
 3. Navigate to the project directory:
    ```powershell
-   cd "C:\path\to\blocky-dsa-world"
+   cd "C:\Users\Vipul\OneDrive\Documents\Desktop\project 4"
    ```
-4. Verify Tkinter is available:
+4. Verify Tkinter is ready:
    ```powershell
    python -c "import tkinter; print('Tkinter is ready!')"
    ```
@@ -238,32 +279,44 @@ Launch the desktop visualizer with a single command:
 python main.py
 ```
 
-### Quick Walkthrough
-1. **Switch Modules**: Use the top navigation tabs:
-   - **📦 Stack & Queue Lab**: Push/Pop on the Stack Tower or Enqueue/Dequeue on the Conveyor Belt.
-   - **🌳 BST Explorer**: Full 3D Binary Search Tree world with camera controls and traversal player.
-2. **Load Sample BST**: In BST Explorer, click `⭐ Load Sample Tree (50, 30, 70, 20, 40, 60, 80)`.
-3. **Run Traversals**:
-   - Click `🔄 Inorder (L-Root-R)` -> Watch blocks highlight one-by-one in ascending sorted order: `[20, 30, 40, 50, 60, 70, 80]`.
-   - Click `🌱 Preorder (Root-L-R)` -> Visited root first: `[50, 30, 20, 40, 70, 60, 80]`.
-   - Click `🍂 Postorder (L-R-Root)` -> Visited subtrees first: `[20, 40, 30, 60, 80, 70, 50]`.
-4. **Animation Player**: Use `⏸ Pause`, `▶ Resume`, `🔄 Restart`, and speed controls (`0.5x`, `1x`, `2x`) during any active traversal.
-5. **Interactive Camera**: Drag canvas with left mouse button to pan 3D scene; scroll wheel or `+` / `-` buttons to zoom in and out.
-6. **Undo an Action**: Click `↩ UNDO Last Action` anytime to safely step backward.
-7. **Launch Academy**: Click `🎓 DSA Academy & Quiz` in the header for lessons and quizzes.
+### Module Navigation
+Use the top **MODULE DECK** tab buttons:
+- **📦 Stack & Queue Lab**: Push/Pop on the Stack Tower or Enqueue/Dequeue on the Conveyor Belt.
+- **🌳 BST Explorer**: 3D Binary Search Tree world with camera controls and traversal player.
+- **👑 Infix to Postfix Kingdom**: 3D conversion arena with token lane, stack tower, postfix runway, and challenge mode.
+
+### Infix Kingdom Walkthrough
+1. **Choose or Enter an Expression**:
+   - Type any custom expression into the input field (e.g. `(A+B)*C` or `123+456*2`).
+   - Or click one of the 6 quick sample buttons (`A+B*C`, `(A+B)*C`, `A+B*(C-D)`, `A^B^C`, `(A+B)*(C-D)`, `A+B*C-D/E`).
+2. **Step Through the Conversion**:
+   - Click `▶ Play` for smooth continuous 3D block flight animations.
+   - Click `⏭ Next` or `⏮ Prev` to step forward and backward.
+   - Click `⏭ Skip to Result` for instant conversion.
+   - Click any row in the **Full Step Trace** table to jump directly to that step.
+3. **Copy the Result**:
+   - Click `📋 Copy Result` to copy the generated postfix string to your clipboard.
+4. **Practice in Challenge Mode**:
+   - Select difficulty (Easy, Medium, Hard) and click `🎲 New Challenge`.
+   - Predict the postfix result and click `✅ Submit Prediction`.
+   - Click `👁 Watch Solution` to view the conversion in the 3D arena.
+5. **Portals**:
+   - Click the purple **🚪 RETURN** portal on the left to return to the Stack & Queue Lab.
+   - Click the cyan **🌀 RESET** portal on the right to reset the conversion arena.
 
 ---
 
-## 🧪 How to Run the Unit Tests
+## 🧪 How to Run the Unit Tests (81 Tests)
 
 The test suite covers:
+- Complete Infix to Postfix tokenization, operator precedence, right-associativity, and parentheses.
+- Multi-digit numbers, multi-letter variables, decimal numbers, and invalid syntax rejection.
+- Random challenge generation validity.
 - Boundary conditions (empty structures, full capacity overflow, duplicate BST insertions).
-- Pointer invariant checks (e.g., verifying `rear` becomes `None` when the last queue element is dequeued).
-- LIFO, FIFO, and BST ordering verification.
-- Complete canonical sample tree traversal verification against expected outputs.
-- Non-blocking headless GUI integration tests.
+- Pointer invariant checks (e.g. verifying `rear` becomes `None` on empty queue).
+- Headless GUI integration tests for all modules.
 
-Run all tests via Python's standard `unittest` test runner:
+Run the entire test suite using Python's standard `unittest` test runner:
 
 ```powershell
 python -m unittest discover tests -v
@@ -271,14 +324,15 @@ python -m unittest discover tests -v
 
 Expected output:
 ```text
-test_copy (test_stack.TestStack) ... ok
-test_lifo_order (test_stack.TestStack) ... ok
-test_peek_behavior (test_stack.TestStack) ... ok
-test_single_element_removal_resets_rear (test_queue.TestQueue) ... ok
-test_fifo_order (test_queue.TestQueue) ... ok
-test_stack_gui_lifecycle (test_gui_integration.TestGUIIntegration) ... ok
+test_all_samples_match (tests.test_infix_to_postfix.TestInfixToPostfix) ... ok
+test_exponentiation_right_associativity (tests.test_infix_to_postfix.TestInfixToPostfix) ... ok
+test_multi_digit_numbers (tests.test_infix_to_postfix.TestInfixToPostfix) ... ok
+test_syntax_errors_caught (tests.test_infix_to_postfix.TestInfixToPostfix) ... ok
+test_infix_mode_switch (tests.test_gui_integration.TestGUIIntegration) ... ok
+test_infix_step_navigation (tests.test_gui_integration.TestGUIIntegration) ... ok
+test_infix_challenge_mode (tests.test_gui_integration.TestGUIIntegration) ... ok
 ...
-Ran 27 tests in 1.111s
+Ran 81 tests in 4.466s
 
 OK
 ```
@@ -287,78 +341,42 @@ OK
 
 ## 📖 Step-by-Step Operation Examples
 
-### Example 1: Demonstrating LIFO (Stack)
-1. Push `10` -> Stack has `[10]`. Top is `10`.
-2. Push `20` -> Stack has `[10, 20]`. Top is `20`.
-3. Push `30` -> Stack has `[10, 20, 30]`. Top is `30`.
-4. Click `⬇ POP`: Block `30` is popped first, even though `10` was entered first.
-   - **Conclusion**: *Last In, First Out (LIFO)*.
+### Example: Converting `A+B*C` to Postfix
+1. **Token `A` (Operand)**: Sent directly to output $\to$ Output: `[A]`, Stack: `[]`.
+2. **Token `+` (Operator)**: Stack is empty $\to$ Push `+` $\to$ Output: `[A]`, Stack: `[+]`.
+3. **Token `B` (Operand)**: Sent directly to output $\to$ Output: `[A, B]`, Stack: `[+]`.
+4. **Token `*` (Operator)**: Precedence of `*` (2) > `+` (1) $\to$ Push `*` $\to$ Output: `[A, B]`, Stack: `[+, *]`.
+5. **Token `C` (Operand)**: Sent directly to output $\to$ Output: `[A, B, C]`, Stack: `[+, *]`.
+6. **End of Expression (Drain Stack)**:
+   - Pop `*` $\to$ Output: `[A, B, C, *]`.
+   - Pop `+` $\to$ Output: `[A, B, C, *, +]`.
+7. **Final Postfix Result**: `A B C * +`
 
-### Example 2: Demonstrating FIFO (Queue)
-1. Enqueue `"A1"` -> Queue has `["A1"]`. Front is `"A1"`, Rear is `"A1"`.
-2. Enqueue `"B2"` -> Queue has `["A1", "B2"]`. Front is `"A1"`, Rear is `"B2"`.
-3. Enqueue `"C3"` -> Queue has `["A1", "B2", "C3"]`.
-4. Click `⏪ DEQUEUE`: Block `"A1"` is removed first because it entered first.
-   - **Conclusion**: *First In, First Out (FIFO)*.
-
----
-
-## 📸 Screenshots & Visuals
-
-Genuine screenshots can be captured directly from your screen when running `python main.py` and placed in the `assets/` directory:
-
-| Screenshot | Description |
-| :--- | :--- |
-| `assets/screenshot_overview.png` | Complete UI showing 3D blocks on Stack Tower and Queue Conveyor. |
-| `assets/screenshot_learning_mode.png` | The DSA Academy dialog showing viva concepts and practice quiz. |
-| `assets/screenshot_telemetry.png` | Real-time metrics card showing size, pointers, and history logs. |
+### Example: Converting `A^B^C` (Right-Associative Exponentiation)
+1. **Token `A`**: Output: `[A]`.
+2. **Token `^`**: Stack: `[^]`.
+3. **Token `B`**: Output: `[A, B]`.
+4. **Token `^`**: Incoming `^` has precedence 3. Top of stack `^` has precedence 3. Because `^` is **right-associative**, top is **not** popped! Push incoming `^` $\to$ Stack: `[^, ^]`.
+5. **Token `C`**: Output: `[A, B, C]`.
+6. **Drain Stack**: Pop top `^`, then second `^` $\to$ Output: `A B C ^ ^`.
 
 ---
 
 ## ⚠️ Limitations & Future Enhancements
 
 ### Current Limitations
-- **Capacity Ceiling**: Stack and Queue are capped at 7 items each to ensure clear, high-resolution rendering without canvas scrolling.
-- **Single-Threaded Tkinter Event Loop**: Animation frames run via `root.after()`. While completely non-blocking, resizing the window during a mid-frame transition redraws the target block at the resting slot.
+- **Capacity Ceiling in Lab Mode**: Stack Tower and Queue Runway in the classic Lab are capped at 7 items for fixed-canvas clarity. Infix Kingdom supports expressions of arbitrary practical length.
+- **Single-Threaded Tkinter Event Loop**: Animation frames run via `root.after()`. Resizing during mid-flight block motion gracefully settles the active block at its destination.
 
 ### Future Enhancements
-- **Circular Queue Visualizer**: A 3D circular carousel showing how array indices wrap around using modulo arithmetic (`(rear + 1) % MAX`).
-- **Sound Effects**: Audio chimes using standard Windows `winsound` for block placements and pop sounds.
-- **Double-Ended Queue (Deque)**: Support for pushing and popping at both ends.
+- **Postfix Expression Evaluator**: Enter numeric values for variables (e.g. $A=2, B=3, C=4$) and watch a 3D postfix evaluation stack compute the final numeric result.
+- **Sound Effects**: Audio chimes using standard Windows `winsound` for block placements and portal warps.
+- **Prefix (Polish Notation) Kingdom**: Bidirectional converter from Infix to Prefix notation.
 
 ---
 
-## 📤 GitHub Upload Instructions
+## 👤 Author & License
 
-To upload this project to your GitHub account:
-
-1. Open PowerShell in the project directory:
-   ```powershell
-   cd "C:\Users\Vipul\OneDrive\Documents\Desktop\project 4"
-   ```
-2. Initialize a local git repository:
-   ```powershell
-   git init
-   ```
-3. Stage all project files:
-   ```powershell
-   git add .
-   ```
-4. Commit the files:
-   ```powershell
-   git commit -m "Initial commit: Blocky DSA World 3D-Style Stack & Queue Visualizer"
-   ```
-5. Rename the branch to `main`:
-   ```powershell
-   git branch -M main
-   ```
-6. Add your GitHub remote repository (replace with your repository URL):
-   ```powershell
-   git remote add origin https://github.com/YOUR_USERNAME/blocky-dsa-world.git
-   ```
-7. Push to GitHub:
-   ```powershell
-   git push -u origin main
-   ```
-
----
+- **Author**: Senior Python Developer, DSA Professor & 3D Game Developer
+- **Tech Stack**: Python 3 Standard Library + Tkinter Canvas
+- **License**: MIT License — free for educational, classroom, and personal use.

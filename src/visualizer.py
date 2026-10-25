@@ -75,8 +75,28 @@ class VisualizerCanvas(tk.Canvas):
         self.highlighted_stack_idx: Optional[int] = None
         self.highlighted_queue_idx: Optional[int] = None
 
-        # Bind resize and cloud loop
+        # Infix to Postfix Kingdom State
+        self.infix_tokens: List[str] = []
+        self.infix_active_token_idx: int = -1
+        self.infix_stack_items: List[str] = []
+        self.infix_postfix_items: List[str] = []
+        self.infix_current_step: Any = None
+        self.infix_step_index: int = 0
+        self.infix_total_steps: int = 0
+        self.infix_error_msg: Optional[str] = None
+        self.infix_flying_block: Optional[Dict[str, Any]] = None
+        self.on_portal_return: Optional[Callable[[], None]] = None
+        self.on_portal_reset: Optional[Callable[[], None]] = None
+        self.on_portal_learn: Optional[Callable[[], None]] = None
+
+        # Interactive 3D Portal Hitboxes: (x1, y1, x2, y2)
+        self._portal_return_box: Tuple[int, int, int, int] = (0, 0, 0, 0)
+        self._portal_reset_box: Tuple[int, int, int, int] = (0, 0, 0, 0)
+        self._portal_learn_box: Tuple[int, int, int, int] = (0, 0, 0, 0)
+
+        # Bind resize, mouse clicks, and cloud loop
         self.bind("<Configure>", self._on_resize)
+        self.bind("<Button-1>", self._on_canvas_click)
         self._cloud_drift_loop()
 
     def destroy(self) -> None:
@@ -108,7 +128,7 @@ class VisualizerCanvas(tk.Canvas):
             self.redraw()
 
     def set_mode(self, mode: str) -> None:
-        """Switch visualizer view mode: 'STACK_QUEUE' or 'BST'."""
+        """Switch visualizer view mode: 'STACK_QUEUE', 'BST', or 'INFIX'."""
         self.mode = mode
         self.redraw()
 
@@ -123,6 +143,34 @@ class VisualizerCanvas(tk.Canvas):
     def _on_resize(self, event) -> None:
         if not self.is_animating:
             self.redraw()
+
+    def _on_canvas_click(self, event) -> None:
+        """Handles interactive 3D portal clicks on the Canvas."""
+        if self.mode != "INFIX" or self.is_animating:
+            return
+
+        cx, cy = event.x, event.y
+
+        # 1. Return Portal Click
+        rx1, ry1, rx2, ry2 = self._portal_return_box
+        if rx1 <= cx <= rx2 and ry1 <= cy <= ry2:
+            if self.on_portal_return:
+                self.on_portal_return()
+            return
+
+        # 2. Reset Portal Click
+        sx1, sy1, sx2, sy2 = self._portal_reset_box
+        if sx1 <= cx <= sx2 and sy1 <= cy <= sy2:
+            if self.on_portal_reset:
+                self.on_portal_reset()
+            return
+
+        # 3. Academy Guide Click
+        lx1, ly1, lx2, ly2 = self._portal_learn_box
+        if lx1 <= cx <= lx2 and ly1 <= cy <= ly2:
+            if self.on_portal_learn:
+                self.on_portal_learn()
+            return
 
     def _cloud_drift_loop(self) -> None:
         if not self.winfo_exists():
@@ -158,13 +206,17 @@ class VisualizerCanvas(tk.Canvas):
 
         self._draw_sky_and_sun(width, height)
         self._draw_clouds()
-        self._draw_voxel_landscape(width, height)
-        self._draw_avatar_mascot(width, height)
 
-        if self.mode == "BST":
+        if self.mode == "INFIX":
+            self._draw_infix_kingdom(width, height)
+        elif self.mode == "BST":
+            self._draw_voxel_landscape(width, height)
+            self._draw_avatar_mascot(width, height)
             if self.bst_ref:
                 self._draw_bst_platform(width, height)
         else:
+            self._draw_voxel_landscape(width, height)
+            self._draw_avatar_mascot(width, height)
             if self.stack_ref:
                 self._draw_stack_platform(width, height)
 
@@ -295,20 +347,28 @@ class VisualizerCanvas(tk.Canvas):
 
     def _draw_speech_bubble(self, anchor_x: int, anchor_y: int, max_width: int) -> None:
         text = self.avatar_speech
-        bubble_w = min(360, max(220, len(text) * 7))
-        bubble_h = 58
-        bx = max(10, min(anchor_x - bubble_w // 2, max_width - bubble_w - 20))
-        by = max(15, anchor_y - bubble_h - 12)
+        bubble_w = min(320, max(200, len(text) * 7))
+        bubble_h = 56
+
+        if self.mode == "INFIX":
+            # Float safely in the open sky above the postfix runway
+            # Left edge bx is guaranteed to stay right of the stack tower & badge (bx >= 290)
+            bx = max(290, min(anchor_x + 15, max_width - bubble_w - 20))
+            by = max(115, anchor_y - bubble_h - 16)
+        else:
+            bx = max(10, min(anchor_x - bubble_w // 2, max_width - bubble_w - 20))
+            by = max(15, anchor_y - bubble_h - 12)
 
         # Speech bubble background with soft shadow
-        self.create_rectangle(bx + 3, by + 3, bx + bubble_w + 3, by + bubble_h + 3, fill="#2C3E50", outline="")
+        self.create_rectangle(bx + 3, by + 3, bx + bubble_w + 3, by + bubble_h + 3, fill="#0F172A", outline="")
         self.create_rectangle(bx, by, bx + bubble_w, by + bubble_h, fill="#FFFFFF", outline="#34495E", width=2)
 
         # Speech pointer triangle
         ptr_tip_x = anchor_x
         ptr_tip_y = anchor_y
-        ptr_b1_x = anchor_x - 8
-        ptr_b2_x = anchor_x + 8
+        base_center = max(bx + 16, min(anchor_x + 18, bx + bubble_w - 16))
+        ptr_b1_x = base_center - 8
+        ptr_b2_x = base_center + 8
         self.create_polygon(ptr_b1_x, by + bubble_h, ptr_b2_x, by + bubble_h, ptr_tip_x, ptr_tip_y, fill="#FFFFFF", outline="#34495E", width=2)
         # Cover seam
         self.create_line(ptr_b1_x + 1, by + bubble_h, ptr_b2_x - 1, by + bubble_h, fill="#FFFFFF", width=3)
@@ -1262,3 +1322,456 @@ class VisualizerCanvas(tk.Canvas):
         self.bst_visited_nodes = []
         self.bst_duplicate_node = None
         self.redraw()
+
+    # -------------------------------------------------------------------------
+    # INFIX TO POSTFIX KINGDOM (ROBLOX 3D EXPRESSION ARENA)
+    # -------------------------------------------------------------------------
+    def set_infix_state(
+        self,
+        tokens: List[str],
+        active_token_idx: int,
+        stack_items: List[str],
+        postfix_items: List[str],
+        current_step: Any = None,
+        step_index: int = 0,
+        total_steps: int = 0,
+        error_msg: Optional[str] = None
+    ) -> None:
+        """Updates the active visual state for Infix to Postfix Kingdom."""
+        self.infix_tokens = list(tokens)
+        self.infix_active_token_idx = active_token_idx
+        self.infix_stack_items = list(stack_items)
+        self.infix_postfix_items = list(postfix_items)
+        self.infix_current_step = current_step
+        self.infix_step_index = step_index
+        self.infix_total_steps = total_steps
+        self.infix_error_msg = error_msg
+        if current_step and getattr(current_step, "explanation", None):
+            self.avatar_speech = f"Step {step_index}/{total_steps}: {current_step.action_summary}"
+        elif error_msg:
+            self.avatar_speech = f"⚠️ Syntax Error: {error_msg}"
+        self.redraw()
+
+    def _draw_infix_kingdom(self, width: int, height: int) -> None:
+        """
+        Renders the vibrant, Roblox-inspired Infix to Postfix Kingdom:
+        - Floating 3D island terrain with grass, studs, and glowing crystal ores
+        - Towering Entrance Pillars and Grand Sign reading 'INFIX TO POSTFIX KINGDOM'
+        - Interactive 3D Return Portal (to DSA World) and Reset Portal
+        - Infix Token Stream Lane with active scanner cursor
+        - Vertical Operator Stack Tower (LIFO) with guide rails and TOP crown
+        - Horizontal Postfix Output Runway with forward chevrons
+        - 3D Tech Explanation Board with step counter and algorithm reasoning
+        - Coder Avatar Mascot with live speech bubble
+        - Non-blocking animated flying blocks during transitions
+        """
+        ground_y = int(height * 0.63)
+
+        # 1. Floating Island Terrain
+        # Grass top platform with gold stud trim
+        self.create_rectangle(24, ground_y, width - 24, ground_y + 24, fill="#2ECC71", outline="#27AE60", width=2)
+        self.create_rectangle(24, ground_y - 4, width - 24, ground_y, fill="#F1C40F", outline="#D4AC0D", width=1)
+        # Deep Obsidian & Crystal Cliff base
+        self.create_rectangle(24, ground_y + 24, width - 24, height - 6, fill="#1E293B", outline="#0F172A", width=2)
+
+        # Glowing Crystal Ore deposits in cliff
+        crystals = [
+            (55, ground_y + 35, "#A855F7"),
+            (130, ground_y + 55, "#38BDF8"),
+            (width // 2 - 80, ground_y + 40, "#FACC15"),
+            (width // 2 + 100, ground_y + 55, "#34D399"),
+            (width - 150, ground_y + 42, "#F472B6"),
+        ]
+        for cx, cy, col in crystals:
+            self._draw_3d_cube(cx, cy, 22, 16, 5, 4, col, "#FFFFFF", col, studs=False)
+
+        # 2. Entrance Sign Archway
+        # Left Pillar
+        self._draw_3d_cube(18, 20, 24, ground_y - 20, 8, 6, "#334155", "#475569", "#1E293B", studs=True)
+        self._draw_3d_cube(23, 8, 14, 14, 4, 3, "#F97316", "#FDE047", "#EA580C", studs=False)
+
+        # Right Pillar
+        self._draw_3d_cube(width - 42, 20, 24, ground_y - 20, 8, 6, "#334155", "#475569", "#1E293B", studs=True)
+        self._draw_3d_cube(width - 37, 8, 14, 14, 4, 3, "#F97316", "#FDE047", "#EA580C", studs=False)
+
+        # Spanning Grand Sign Banner
+        banner_w = min(560, max(320, width - 110))
+        bx = width // 2 - banner_w // 2
+        by = 12
+        bh = 38
+        self._draw_3d_cube(bx, by, banner_w, bh, 10, 7, "#D97706", "#F59E0B", "#92400E", studs=True)
+
+        # Banner Title
+        self.create_text(
+            width // 2, by + 19,
+            text="👑 INFIX TO POSTFIX KINGDOM 👑",
+            font=("Segoe UI", 12, "bold"),
+            fill="#FFFFFF"
+        )
+
+        # Subtitle Ribbon
+        self.create_rectangle(bx + 30, by + bh + 2, bx + banner_w - 30, by + bh + 18, fill="#0F172A", outline="#FACC15")
+        self.create_text(
+            width // 2, by + bh + 10,
+            text="ROBLOX 3D EXPRESSION LAB • SHUNTING-YARD ALGORITHM • O(n) TIME & SPACE",
+            font=("Segoe UI", 7, "bold"),
+            fill="#FACC15"
+        )
+
+        # 3. Interactive Portals
+        # Left: Return Portal to Main DSA World
+        px = 24
+        py = ground_y - 95
+        pw = 46
+        ph = 85
+        self._draw_3d_cube(px, py, pw, ph, 8, 6, "#1E1B4B", "#312E81", "#0F172A", studs=True)
+        self.create_oval(px + 6, py + 14, px + pw - 6, py + ph - 8, fill="#7C3AED", outline="#C084FC", width=2)
+        self.create_oval(px + 12, py + 24, px + pw - 12, py + ph - 18, fill="#4C1D95", outline="#E9D5FF")
+        self.create_text(px + pw // 2, py - 10, text="🚪 RETURN", font=("Segoe UI", 8, "bold"), fill="#E9D5FF")
+        self.create_text(px + pw // 2, py + ph + 10, text="[DSA World]", font=("Segoe UI", 7, "bold"), fill="#CBD5E1")
+        self._portal_return_box = (px - 5, py - 18, px + pw + 12, py + ph + 20)
+
+        # Right: Reset Portal
+        rx = width - 74
+        ry = ground_y - 95
+        rw = 46
+        rh = 85
+        self._draw_3d_cube(rx, ry, rw, rh, 8, 6, "#082F49", "#075985", "#0F172A", studs=True)
+        self.create_oval(rx + 6, ry + 14, rx + rw - 6, ry + rh - 8, fill="#0284C7", outline="#38BDF8", width=2)
+        self.create_oval(rx + 12, ry + 24, rx + rw - 12, ry + rh - 18, fill="#0369A1", outline="#BAE6FD")
+        self.create_text(rx + rw // 2, ry - 10, text="🌀 RESET", font=("Segoe UI", 8, "bold"), fill="#BAE6FD")
+        self.create_text(rx + rw // 2, ry + rh + 10, text="[Clear All]", font=("Segoe UI", 7, "bold"), fill="#CBD5E1")
+        self._portal_reset_box = (rx - 5, ry - 18, rx + rw + 12, ry + rh + 20)
+
+        # 4. Infix Input Token Stream Lane (Upper Middle)
+        track_x = int(width * 0.14)
+        track_y = 74
+        track_w = int(width * 0.72)
+        track_h = 24
+        self._draw_3d_cube(track_x, track_y, track_w, track_h, 8, 6, "#334155", "#475569", "#1E293B", studs=False)
+
+        # Track Label
+        self.create_text(
+            track_x + 55, track_y + 12,
+            text="📥 INFIX STREAM ⏩",
+            font=("Segoe UI", 8, "bold"),
+            fill="#38BDF8"
+        )
+
+        # Render Tokens along the track
+        toks = self.infix_tokens
+        if not toks:
+            self.create_text(
+                track_x + track_w // 2 + 30, track_y + 12,
+                text="[ Enter an expression on left or click a sample to start ]",
+                font=("Segoe UI", 8, "italic"),
+                fill="#CBD5E1"
+            )
+        else:
+            avail_w = track_w - 130
+            num_toks = len(toks)
+            tok_w = min(40, max(24, int(avail_w / max(1, num_toks)) - 4))
+            start_tx = track_x + 125
+
+            for i, tok_val in enumerate(toks):
+                bx = start_tx + i * (tok_w + 4)
+                by = track_y - 20
+                is_active = (i == self.infix_active_token_idx)
+
+                palette_idx = 1
+                if tok_val == "^":
+                    palette_idx = 4
+                elif tok_val in ("*", "/", "%"):
+                    palette_idx = 1
+                elif tok_val in ("+", "-"):
+                    palette_idx = 2
+                elif tok_val in ("(", ")"):
+                    palette_idx = 3
+                else:
+                    palette_idx = 0
+
+                if is_active:
+                    self.create_rectangle(bx - 3, by - 12, bx + tok_w + 10, by + 26, outline="#FACC15", width=2, dash=(3, 2))
+                    self.create_text(bx + tok_w // 2, by - 16, text="⬇ SCAN", font=("Segoe UI", 7, "bold"), fill="#FACC15")
+
+                self._draw_labeled_dsa_block(bx, by, tok_w, 20, tok_val, palette_idx, highlight=is_active)
+
+        # 5. Visual Operator Stack Tower (Center-Left)
+        stk_x = 84
+        stk_w = 82
+        stk_h = 24
+        pedestal_y = ground_y - 12
+
+        self._draw_3d_cube(stk_x - 10, pedestal_y, stk_w + 20, 18, 10, 7, "#1E293B", "#334155", "#0F172A", studs=True)
+        self.create_text(stk_x + stk_w // 2, pedestal_y + 9, text="📦 OPERATOR STACK (LIFO)", font=("Segoe UI", 8, "bold"), fill="#F8FAFC")
+
+        max_visible_slots = 7
+        for i in range(max_visible_slots):
+            slot_y = pedestal_y - 8 - (i + 1) * (stk_h + 4)
+            self.create_rectangle(stk_x, slot_y, stk_x + stk_w, slot_y + stk_h, outline="#94A3B8", dash=(2, 3), width=1)
+            self.create_text(stk_x - 10, slot_y + stk_h // 2, text=f"[{i}]", font=("Consolas", 7, "bold"), fill="#334155")
+
+        stk_items = self.infix_stack_items
+        for i, val in enumerate(stk_items[:max_visible_slots]):
+            slot_y = pedestal_y - 8 - (i + 1) * (stk_h + 4)
+            p_idx = 4 if val == "^" else (1 if val in ("*", "/", "%") else (2 if val in ("+", "-") else 3))
+            self._draw_labeled_dsa_block(stk_x, slot_y, stk_w, stk_h, val, p_idx, highlight=False)
+
+        if stk_items:
+            top_i = min(len(stk_items) - 1, max_visible_slots - 1)
+            top_y = pedestal_y - 8 - (top_i + 1) * (stk_h + 4)
+            badge_x = stk_x + stk_w + 14
+            badge_y = top_y + stk_h // 2
+
+            self.create_polygon(badge_x - 8, badge_y, badge_x - 2, badge_y - 5, badge_x - 2, badge_y + 5, fill="#F59E0B", outline="#D97706")
+            self.create_rectangle(badge_x, badge_y - 10, badge_x + 58, badge_y + 10, fill="#FACC15", outline="#B45309", width=1)
+            self.create_text(badge_x + 29, badge_y, text="👑 TOP", font=("Segoe UI", 7, "bold"), fill="#78350F")
+        else:
+            self.create_text(stk_x + stk_w // 2, pedestal_y - 25, text="[ Stack Empty ]", font=("Segoe UI", 8, "italic"), fill="#64748B")
+
+        # 6. Postfix Output Runway (Center-Right)
+        out_x = 295
+        out_w = max(200, (rx - 15) - out_x)
+        out_y = ground_y - 12
+        self._draw_3d_cube(out_x - 10, out_y, out_w + 20, 18, 10, 7, "#065F46", "#047857", "#064E3B", studs=False)
+
+        for ch_x in range(out_x + 15, out_x + out_w - 20, 36):
+            self.create_text(ch_x, out_y + 9, text="⏩", font=("Segoe UI", 7), fill="#6EE7B7")
+
+        self.create_text(out_x + out_w // 2, out_y + 9, text="🚀 POSTFIX OUTPUT LANE (RPN)", font=("Segoe UI", 8, "bold"), fill="#FFFFFF")
+
+        post_items = self.infix_postfix_items
+        if not post_items:
+            self.create_text(out_x + out_w // 2, out_y - 25, text="[ Output Empty — Emitted Tokens Arrive Here ]", font=("Segoe UI", 8, "italic"), fill="#065F46")
+        else:
+            num_p = len(post_items)
+            avail_w = out_w - 20
+            p_block_w = max(13, min(34, int(avail_w / max(1, num_p)) - 2))
+            spacing = p_block_w + 2
+            if num_p * spacing > avail_w:
+                p_block_w = max(10, int(avail_w / max(1, num_p)) - 1)
+                spacing = p_block_w + 1
+
+            p_block_h = 24
+            for i, p_val in enumerate(post_items):
+                px = out_x + 8 + i * spacing
+                py = out_y - p_block_h - 8
+                p_idx = 4 if p_val == "^" else (1 if p_val in ("*", "/", "%") else (2 if p_val in ("+", "-") else 0))
+                self._draw_labeled_dsa_block(px, py, p_block_w, p_block_h, p_val, p_idx, highlight=False)
+
+        # 7. 3D Explanation Console (Bottom-Center)
+        board_x = int(width * 0.20)
+        board_y = ground_y + 14
+        board_w = int(width * 0.60)
+        board_h = 70
+        self._draw_3d_cube(board_x, board_y, board_w, board_h, 8, 6, "#0F172A", "#1E293B", "#020617", studs=False, outline="#38BDF8")
+
+        if self.infix_current_step:
+            step = self.infix_current_step
+            self.create_text(
+                board_x + 12, board_y + 14,
+                text=f"⚡ STEP {self.infix_step_index} / {self.infix_total_steps} — {step.action_summary}",
+                font=("Segoe UI", 8, "bold"),
+                fill="#FACC15",
+                anchor="w"
+            )
+            self.create_text(
+                board_x + 12, board_y + 32,
+                text=step.explanation,
+                font=("Segoe UI", 8),
+                fill="#F8FAFC",
+                anchor="w",
+                width=board_w - 24
+            )
+            self.create_text(
+                board_x + 12, board_y + 52,
+                text=f"💡 {step.reason}",
+                font=("Segoe UI", 7, "italic"),
+                fill="#38BDF8",
+                anchor="w",
+                width=board_w - 24
+            )
+        elif self.infix_error_msg:
+            self.create_text(
+                board_x + 12, board_y + 18,
+                text="⚠️ SYNTAX ERROR DETECTED",
+                font=("Segoe UI", 9, "bold"),
+                fill="#EF4444",
+                anchor="w"
+            )
+            self.create_text(
+                board_x + 12, board_y + 42,
+                text=self.infix_error_msg,
+                font=("Segoe UI", 8),
+                fill="#FCA5A5",
+                anchor="w",
+                width=board_w - 24
+            )
+        else:
+            self.create_text(
+                board_x + 12, board_y + 22,
+                text="👑 INFIX TO POSTFIX CONVERSION ARENA",
+                font=("Segoe UI", 9, "bold"),
+                fill="#FACC15",
+                anchor="w"
+            )
+            self.create_text(
+                board_x + 12, board_y + 44,
+                text="Enter an expression and click 'Convert & Animate' or choose a sample to begin!",
+                font=("Segoe UI", 8),
+                fill="#94A3B8",
+                anchor="w"
+            )
+
+        # 8. Coder Avatar Mascot (Positioned as conductor between Stack and Runway)
+        avatar_x = 268
+        bob_offset = int(math.sin(self.bob_phase) * 2.5)
+        base_y = ground_y - 8 + bob_offset
+
+        self._draw_3d_cube(avatar_x - 18, ground_y - 6, 36, 12, 5, 3, "#95A5A6", "#BDC3C7", "#7F8C8D", studs=True)
+
+        leg_w, leg_h = 9, 20
+        self._draw_3d_cube(avatar_x - 11, base_y - leg_h, leg_w, leg_h, 3, 2, "#1A5276", "#2980B9", "#154360", studs=False)
+        self._draw_3d_cube(avatar_x + 2, base_y - leg_h, leg_w, leg_h, 3, 2, "#1A5276", "#2980B9", "#154360", studs=False)
+
+        torso_w, torso_h = 24, 24
+        torso_y = base_y - leg_h - torso_h
+        self._draw_3d_cube(avatar_x - torso_w // 2, torso_y, torso_w, torso_h, 5, 3, "#B45309", "#D97706", "#78350F", studs=False)
+        self.create_text(avatar_x + 2, torso_y + 12, text="RPN", font=("Segoe UI", 7, "bold"), fill="#FDE047")
+
+        arm_w, arm_h = 6, 20
+        self._draw_3d_cube(avatar_x - torso_w // 2 - arm_w - 1, torso_y + 2, arm_w, arm_h, 3, 2, "#F59E0B", "#FBBF24", "#B45309", studs=False)
+        wave_y = torso_y - 6 + int(math.sin(self.bob_phase * 2) * 3)
+        self._draw_3d_cube(avatar_x + torso_w // 2 + 1, wave_y, arm_w, arm_h, 3, 2, "#F59E0B", "#FBBF24", "#B45309", studs=False)
+
+        head_w, head_h = 18, 18
+        head_y = torso_y - head_h - 2
+        self._draw_3d_cube(avatar_x - head_w // 2, head_y, head_w, head_h, 4, 3, "#F1C40F", "#F9E79F", "#B7950B", studs=False)
+        self._draw_3d_cube(avatar_x - head_w // 2 - 2, head_y - 7, head_w + 4, 6, 4, 3, "#D97706", "#FACC15", "#92400E", studs=False)
+
+        fx, fy = avatar_x, head_y + 9
+        self.create_oval(fx - 5, fy - 2, fx - 2, fy + 1, fill="#17202A", outline="")
+        self.create_oval(fx + 2, fy - 2, fx + 5, fy + 1, fill="#17202A", outline="")
+        self.create_arc(fx - 4, fy, fx + 4, fy + 5, start=190, extent=160, style=tk.ARC, width=1.5, outline="#17202A")
+
+        self._draw_speech_bubble(avatar_x, head_y - 12, width)
+
+        # 9. In-Flight Animated Block
+        if self.is_animating and self.infix_flying_block:
+            fb = self.infix_flying_block
+            self._draw_labeled_dsa_block(fb["x"], fb["y"], fb.get("w", 36), fb.get("h", 24), fb["val"], fb.get("color_idx", 0), highlight=True)
+
+    def animate_infix_step(
+        self,
+        step: Any,
+        on_complete: Callable[[], None],
+        speed_ms: int = 400
+    ) -> None:
+        """
+        Smoothly animates a conversion step between scanner lane, stack tower, and output lane.
+        Non-blocking execution via after().
+        """
+        if speed_ms <= 0 or not self.winfo_exists():
+            self.is_animating = False
+            self.infix_flying_block = None
+            self.redraw()
+            on_complete()
+            return
+
+        width = self.winfo_width() or 850
+        height = self.winfo_height() or 550
+        ground_y = int(height * 0.63)
+
+        track_x = int(width * 0.14)
+        track_y = 74
+        track_w = int(width * 0.72)
+        stk_x = 84
+        stk_h = 24
+        pedestal_y = ground_y - 12
+
+        rx = width - 74
+        out_x = 295
+        out_w = max(200, (rx - 15) - out_x)
+        out_y = ground_y - 12
+
+        start_x = track_x + track_w // 2
+        start_y = track_y - 20
+        target_x = out_x + 20
+        target_y = out_y - 30
+        color_idx = 0
+        token_val = getattr(step, "animated_item", None) or getattr(step, "token", "?")
+
+        action_type = getattr(step, "action_type", "")
+        if action_type == "OUTPUT_OPERAND":
+            start_x = track_x + 130 + max(0, self.infix_active_token_idx) * 36
+            start_y = track_y - 20
+            out_count = max(0, len(step.postfix_snapshot) - 1)
+            num_p = max(1, len(step.postfix_snapshot))
+            avail_w = out_w - 20
+            spacing = max(10, min(36, int(avail_w / num_p)))
+            target_x = out_x + 8 + out_count * spacing
+            target_y = out_y - 32
+            color_idx = 0
+        elif action_type in ("PUSH_OPERATOR", "PUSH_PAREN"):
+            start_x = track_x + 130 + max(0, self.infix_active_token_idx) * 36
+            start_y = track_y - 20
+            stk_idx = max(0, len(step.stack_snapshot) - 1)
+            target_x = stk_x
+            target_y = pedestal_y - 8 - (stk_idx + 1) * (stk_h + 4)
+            color_idx = 4 if token_val == "^" else (1 if token_val in ("*", "/", "%") else (2 if token_val in ("+", "-") else 3))
+        elif action_type in ("POP_TO_OUTPUT", "DRAIN_STACK"):
+            stk_idx = len(step.stack_snapshot)
+            start_x = stk_x
+            start_y = pedestal_y - 8 - (stk_idx + 1) * (stk_h + 4)
+            out_count = max(0, len(step.postfix_snapshot) - 1)
+            num_p = max(1, len(step.postfix_snapshot))
+            avail_w = out_w - 20
+            spacing = max(10, min(36, int(avail_w / num_p)))
+            target_x = out_x + 8 + out_count * spacing
+            target_y = out_y - 32
+            color_idx = 4 if token_val == "^" else (1 if token_val in ("*", "/", "%") else (2 if token_val in ("+", "-") else 3))
+        elif action_type == "DISCARD_PAREN":
+            start_x = stk_x
+            start_y = pedestal_y - 8 - 1 * (stk_h + 4)
+            target_x = stk_x + 50
+            target_y = start_y - 50
+            color_idx = 3
+
+        self.is_animating = True
+        frames = max(4, min(14, int(speed_ms / 30)))
+        frame_interval = max(15, int(speed_ms / frames))
+        cur_frame = 0
+
+        def _anim_step():
+            if not self.winfo_exists():
+                self.is_animating = False
+                self.infix_flying_block = None
+                return
+
+            nonlocal cur_frame
+            cur_frame += 1
+            progress = cur_frame / frames
+            eased = 1 - pow(1 - progress, 2)
+            cur_x = start_x + (target_x - start_x) * eased
+            arc_y = -35 * math.sin(progress * math.pi)
+            cur_y = start_y + (target_y - start_y) * eased + arc_y
+
+            self.infix_flying_block = {
+                "x": cur_x,
+                "y": cur_y,
+                "val": token_val,
+                "color_idx": color_idx,
+                "w": 36,
+                "h": 22
+            }
+            self.redraw()
+
+            if cur_frame < frames:
+                self._anim_after_id = self.after(frame_interval, _anim_step)
+            else:
+                self.is_animating = False
+                self.infix_flying_block = None
+                self.redraw()
+                on_complete()
+
+        _anim_step()
